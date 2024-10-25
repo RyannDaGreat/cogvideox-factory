@@ -23,6 +23,10 @@ DATA_ROOT="datasets/video-dataset-disney"
 CAPTION_COLUMN="prompt.txt"
 VIDEO_COLUMN="videos.txt"
 
+#0 means on main thread. 8 was default.
+NUM_DATAWORKERS=0
+
+
 # Launch experiments with different hyperparameters
 for learning_rate in "${LEARNING_RATES[@]}"; do
   for lr_schedule in "${LR_SCHEDULES[@]}"; do
@@ -39,7 +43,7 @@ for learning_rate in "${LEARNING_RATES[@]}"; do
           --height_buckets 480 \
           --width_buckets 720 \
           --frame_buckets 49 \
-          --dataloader_num_workers 8 \
+          --dataloader_num_workers $NUM_DATAWORKERS \
           --pin_memory \
           --validation_prompt \"BW_STYLE A black and white animated scene unfolds with an anthropomorphic goat surrounded by musical notes and symbols, suggesting a playful environment. Mickey Mouse appears, leaning forward in curiosity as the goat remains still. The goat then engages with Mickey, who bends down to converse or react. The dynamics shift as Mickey grabs the goat, potentially in surprise or playfulness, amidst a minimalistic background. The scene captures the evolving relationship between the two characters in a whimsical, animated setting, emphasizing their interactions and emotions:::BW_STYLE A panda, dressed in a small, red jacket and a tiny hat, sits on a wooden stool in a serene bamboo forest. The panda's fluffy paws strum a miniature acoustic guitar, producing soft, melodic tunes. Nearby, a few other pandas gather, watching curiously and some clapping in rhythm. Sunlight filters through the tall bamboo, casting a gentle glow on the scene. The panda's face is expressive, showing concentration and joy as it plays. The background includes a small, flowing stream and vibrant green foliage, enhancing the peaceful and magical atmosphere of this unique musical performance\" \
           --validation_images \"/path/to/image1.png:::/path/to/image2.png\"
