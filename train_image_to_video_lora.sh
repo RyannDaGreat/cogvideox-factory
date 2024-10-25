@@ -15,7 +15,7 @@ OPTIMIZERS=("adamw") #OPTIMIZERS=("adamw" "adam")
 MAX_TRAIN_STEPS=("30000")
 
 # Single GPU uncompiled training
-ACCELERATE_CONFIG_FILE="accelerate_configs/uncompiled_1.yaml"
+ACCELERATE_CONFIG_FILE="accelerate_configs/uncompiled_8.yaml" #Default: "accelerate_configs/uncompiled_1.yaml"
 
 # Absolute path to where the data is located. Make sure to have read the README for how to prepare data.
 # This example assumes you downloaded an already prepared dataset from HF CLI as follows:

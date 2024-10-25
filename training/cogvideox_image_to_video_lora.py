@@ -683,7 +683,7 @@ def main(args):
                 images = batch["images"].to(accelerator.device, non_blocking=True)
                 videos = batch["videos"].to(accelerator.device, non_blocking=True)
                 prompts = batch["prompts"]
-                noises_downtemp = batch["noises_downtemp"]
+                noises_downtemp = batch["noises_downtemp"].to(accelerator.device, non_blocking=True)
 
                 # Encode videos
                 if not args.load_tensors:
