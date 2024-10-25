@@ -232,6 +232,18 @@ class CollateFunction:
             "prompts": prompts,
         }
 
+        # #ADDED NOISES
+        noises = [x["noise"] for x in data]
+        noises = torch.stack(noises).to(dtype=self.weight_dtype, non_blocking=True)
+        noises_downtemp = [x["noise_downtemp"] for x in data]
+        noises_downtemp = torch.stack(noises_downtemp).to(dtype=self.weight_dtype, non_blocking=True)
+        output |= {
+            "noises": noises,
+            "noises_downtemp" : noises_downtemp,
+        }
+        rp.fansi_print(f"output['noises_downtemp'].shape = {output['noises_downtemp'].shape }",'cyan','bold') #torch.Size([1, 13, 16,  60,  90])
+        rp.fansi_print(f"output['noises'].shape          = {output['noises'].shape          }",'cyan','bold') #torch.Size([1, 49, 16,  60,  90])
+        rp.fansi_print(f"output['videos'].shape          = {output['videos'].shape          }",'cyan','bold') #torch.Size([1, 49,  3, 480, 720])
 
         return output
 
@@ -826,13 +838,13 @@ def main(args):
             last_lr = lr_scheduler.get_last_lr()[0] if lr_scheduler is not None else args.learning_rate
             logs = {"loss": loss.detach().item(), "lr": last_lr}
             # gradnorm + deepspeed: https://github.com/microsoft/DeepSpeed/issues/4555
-            if accelerator.distributed_type != DistributedType.DEEPSPEED:
-                logs.update(
-                    {
-                        "gradient_norm_before_clip": gradient_norm_before_clip,
-                        "gradient_norm_after_clip": gradient_norm_after_clip,
-                    }
-                )
+            # if accelerator.distributed_type != DistributedType.DEEPSPEED:
+            #     logs.update(
+            #         {
+            #             "gradient_norm_before_clip": gradient_norm_before_clip,
+            #             "gradient_norm_after_clip": gradient_norm_after_clip,
+            #         }
+            #     )
             progress_bar.set_postfix(**logs)
             accelerator.log(logs, step=global_step)
 

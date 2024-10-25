@@ -5,7 +5,7 @@ export NCCL_P2P_DISABLE=1
 export TORCH_NCCL_ENABLE_MONITORING=0
 
 GPU_IDS="0,1,2,3,4,5,6,7"
-GPU_IDS="4"
+# GPU_IDS="4"
 
 # Training Configurations
 # Experiment with as many hyperparameters as you want!
@@ -32,7 +32,7 @@ RANK=2048 #Default: 128
 LORA_ALPHA=$RANK
 
 NUM_DATAWORKERS=0 #0 means on main thread. 8 was default.
-GRADIENT_ACCUMULATION_STEPS=8 #Default: 1
+GRADIENT_ACCUMULATION_STEPS=1 #Default: 1
 CHECKPOINTING_STEPS=200 #Default=1000
 VALIDATION_EPOCHS=100 #Default: 10, equivalent to 690 here
 
