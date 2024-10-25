@@ -551,7 +551,7 @@ def main(args):
     train_dataloader = DataLoader(
         train_dataset,
         batch_size=1,
-        sampler=BucketSampler(train_dataset, batch_size=args.train_batch_size, shuffle=True),
+        # sampler=BucketSampler(train_dataset, batch_size=args.train_batch_size, shuffle=True),
         collate_fn=collate_fn,
         num_workers=args.dataloader_num_workers,
         pin_memory=args.pin_memory,
