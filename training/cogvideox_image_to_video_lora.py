@@ -209,23 +209,31 @@ class CollateFunction:
         self.load_tensors = load_tensors
 
     def __call__(self, data: Dict[str, Any]) -> Dict[str, torch.Tensor]:
-        prompts = [x["prompt"] for x in data[0]]
+        # data = data[0] #USE WHEN WE DONT USE MY DATASET
+
+        # rp.fansi_print(f"data[0]['image'].shape = {data[0]['image'].shape}",'cyan','bold') #torch.Size([49, 3, 480, 720])
+        # rp.fansi_print(f"data[0]['video'].shape = {data[0]['video'].shape}",'cyan','bold') #torch.Size([ 1, 3, 480, 720])
+
+        prompts = [x["prompt"] for x in data]
 
         if self.load_tensors:
+            assert False, 'This is unused! --Ryan'
             prompts = torch.stack(prompts).to(dtype=self.weight_dtype, non_blocking=True)
 
-        images = [x["image"] for x in data[0]]
+        images = [x["image"] for x in data]
         images = torch.stack(images).to(dtype=self.weight_dtype, non_blocking=True)
 
-        videos = [x["video"] for x in data[0]]
+        videos = [x["video"] for x in data]
         videos = torch.stack(videos).to(dtype=self.weight_dtype, non_blocking=True)
 
-        return {
+        output = {
             "images": images,
             "videos": videos,
             "prompts": prompts,
         }
 
+
+        return output
 
 def main(args):
     if args.report_to == "wandb" and args.hub_token is not None:
@@ -988,4 +996,8 @@ def main(args):
 
 if __name__ == "__main__":
     args = get_args()
+
+    import ryan_dataset
+    ryan_dataset.process_args |= args.__dict__
+
     main(args)

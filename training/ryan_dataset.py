@@ -1,3 +1,4 @@
+print("KOYANA SCOTZY")
 """
 
     ORIGINAL DATASET FORMAT:
@@ -88,18 +89,14 @@ def get_sample_helper(
     sample.noise = einops.rearrange(sample.noise, 'T H W C -> T C H W')
     sample.noise = torch.Tensor(sample.noise)
 
-    assert noise_downtemp_interp in {'nearest', 'blend', 'blend_norm'}, noise_downtemp_interp
-    if   noise_downtemp_interp == 'nearest'    : sample.noise_downtemp = rp.resize_list(sample.noise, 13)
-    elif noise_downtemp_interp == 'blend'      : sample.noise_downtemp =                   downsamp_mean(sample.noise, 13)
-    elif noise_downtemp_interp == 'blend_norm' : sample.noise_downtemp = normalized_noises(downsamp_mean(sample.noise, 13))
-    else: assert False, 'impossible'
+    sample.noise_downtemp = downtemp_noise(sample.noise, noise_downtemp_interp)
     
     #Rename variables for CogVid's codebase
     output = rp.as_easydict(
         prompt = sample.text,
-        video = sample.pixel_values,
-        image = sample.pixel_values[0],
-        metadata = {'num_frames': 49, 'height': 480, 'width': 720, 'noise_downtemp_interp': noise_downtemp_interp},
+        video = sample.pixel_values    , #torch.Size([49, 3, 480, 720])
+        image = sample.pixel_values[:1], #torch.Size([ 1, 3, 480, 720])
+        video_metadata = {'num_frames': 49, 'height': 480, 'width': 720, 'noise_downtemp_interp': noise_downtemp_interp},
 
         #New fields
         noise = sample.noise,
@@ -107,7 +104,7 @@ def get_sample_helper(
     )
 
     #Modify this as you code - for clarity.
-    assert set('prompt video image metadata noise noise_downtemp'.split()) == set(output)
+    assert set('prompt video image video_metadata noise noise_downtemp'.split()) == set(output)
 
     if debug:
         #For debugging
@@ -116,12 +113,21 @@ def get_sample_helper(
             f'    • prompt = {output.instance_prompt}',
             f'    • image.shape = {output.image.shape}',
             f'    • video.shape = {output.video.shape}',
-            f'    • metadata = {output.metadata}',
+            f'    • video_metadata = {output.video_metadata}',
             f'    • noise.shape = {output.noise.shape}',
             f'    • noise_downtemp.shape = {output.instance_prompt}',
         )
     
     return output
+
+
+def downtemp_noise(noise, noise_downtemp_interp):
+    assert noise_downtemp_interp in {'nearest', 'blend', 'blend_norm', 'randn'}, noise_downtemp_interp
+    if   noise_downtemp_interp == 'nearest'    : return                  rp.resize_list(noise, 13)
+    elif noise_downtemp_interp == 'blend'      : return                   downsamp_mean(noise, 13)
+    elif noise_downtemp_interp == 'blend_norm' : return normalized_noises(downsamp_mean(noise, 13))
+    elif noise_downtemp_interp == 'randn'      : return torch.randn_like(rp.resize_list(noise, 13)) #Basically no warped noise, just r
+    else: assert False, 'impossible'
 
 
 def downsamp_mean(x, l=13):
@@ -138,7 +144,9 @@ get_sample_iterator = rp.lazy_par_map(
     buffer_limit=10,
 )
 
-def get_sample(index=None, args={}):
+process_args = {} #Is updated in the ...lora.py script
+
+def get_sample(index=None):
     """
     EXAMPLE:
         >>> sample = get_sample()
@@ -153,13 +161,13 @@ def get_sample(index=None, args={}):
         >>> sample.instance_noise.shape
         ans = torch.Size([49, 16, 60, 90])
     """
-
+    
     kwargs = {}
     #See args.py to add more args
-    if args.ryan_data_debug                 is not None: kwargs['debug'                ] = rp.exeval(args.ryan_data_debug           )
-    if args.ryan_data_post_noise_alpha      is not None: kwargs['post_noise_alpha'     ] = rp.exeval(args.ryan_data_post_noise_alpha)
-    if args.ryan_data_delegator_address     is not None: kwargs['delegator_address'    ] =           args.ryan_data_delegator_address
-    if args.ryan_data_noise_downtemp_interp is not None: kwargs['noise_downtemp_interp'] =           args.ryan_data_noise_downtemp_interp
+    if 'ryan_data_debug'                 in process_args: kwargs['debug'                ] = rp.exeval(process_args['ryan_data_debug'                ])
+    if 'ryan_data_post_noise_alpha'      in process_args: kwargs['post_noise_alpha'     ] = rp.exeval(process_args['ryan_data_post_noise_alpha'     ])
+    if 'ryan_data_delegator_address'     in process_args: kwargs['delegator_address'    ] =           process_args['ryan_data_delegator_address'    ]
+    if 'ryan_data_noise_downtemp_interp' in process_args: kwargs['noise_downtemp_interp'] =           process_args['ryan_data_noise_downtemp_interp']
     rp.fansi_print(f"ryan_dataset.get_sample: kwargs={kwargs}",'yellow')
 
     while True:

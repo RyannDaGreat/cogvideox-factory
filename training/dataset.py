@@ -12,6 +12,8 @@ from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 from torchvision.transforms.functional import resize
 
+import rp
+import ryan_dataset
 
 # Must import after torch because this can sometimes lead to a nasty segmentation fault, or stack smashing error
 # Very few bug reports but it happens. Look in decord Github issues for more relevant information.
@@ -42,6 +44,7 @@ class VideoDataset(Dataset):
         random_flip: Optional[float] = None,
         image_to_video: bool = False,
     ) -> None:
+        rp.fansi_print("dataset.VideoDataset: INITIALIZING!",'green','bold')
         super().__init__()
 
         self.data_root = Path(data_root)
@@ -105,6 +108,7 @@ class VideoDataset(Dataset):
         return len(self.video_paths)
 
     def __getitem__(self, index: int) -> Dict[str, Any]:
+        return ryan_dataset.get_sample()
         if isinstance(index, list):
             # Here, index is actually a list of data objects that we need to return.
             # The BucketSampler should ideally return indices. But, in the sampler, we'd like
@@ -268,6 +272,7 @@ class VideoDataset(Dataset):
 
 class VideoDatasetWithResizing(VideoDataset):
     def __init__(self, *args, **kwargs) -> None:
+        rp.fansi_print("dataset.VideoDatasetWithResizing: INITIALIZING!",'green','bold')
         super().__init__(*args, **kwargs)
 
     def _preprocess_video(self, path: Path) -> torch.Tensor:
