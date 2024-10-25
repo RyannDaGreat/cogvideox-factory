@@ -683,6 +683,7 @@ def main(args):
                 images = batch["images"].to(accelerator.device, non_blocking=True)
                 videos = batch["videos"].to(accelerator.device, non_blocking=True)
                 prompts = batch["prompts"]
+                noises_downtemp = batch["noises_downtemp"]
 
                 # Encode videos
                 if not args.load_tensors:
@@ -736,7 +737,10 @@ def main(args):
                     prompt_embeds = prompts.to(dtype=weight_dtype)
 
                 # Sample noise that will be added to the latents
-                noise = torch.randn_like(video_latents)
+
+                # noise = torch.randn_like(video_latents)
+                noise = noises_downtemp.to(video_latents.dtype).to(video_latents.device) #USING WARPED NOISE!
+
                 batch_size, num_frames, num_channels, height, width = video_latents.shape
 
                 # Sample a random timestep for each image
