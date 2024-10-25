@@ -59,6 +59,8 @@ from dataset import BucketSampler, VideoDatasetWithResizing, VideoDatasetWithRes
 from text_encoder import compute_prompt_embeddings  # isort:skip
 from utils import get_gradient_norm, get_optimizer, prepare_rotary_positional_embeddings, print_memory, reset_memory  # isort:skip
 
+import rp
+
 
 logger = get_logger(__name__)
 
@@ -512,9 +514,14 @@ def main(args):
         "random_flip": args.random_flip,
         "image_to_video": True,
     }
+
+    rp.fansi_print(f'dataset_init_kwargs={dataset_init_kwargs}','green','bold')
+
     if args.video_reshape_mode is None:
+        
         train_dataset = VideoDatasetWithResizing(**dataset_init_kwargs)
     else:
+        assert False, 'This is not what saw in the config -- Ryan'
         train_dataset = VideoDatasetWithResizeAndRectangleCrop(
             video_reshape_mode=args.video_reshape_mode, **dataset_init_kwargs
         )
@@ -665,6 +672,10 @@ def main(args):
                     )
                     image_noise_sigma = torch.exp(image_noise_sigma)
                     noisy_images = images + torch.randn_like(images) * image_noise_sigma[:, None, None, None, None]
+
+                    # print("BEFORE ENCODE...")
+                    # rp.tic()
+
                     image_latent_dist = vae.encode(noisy_images).latent_dist
 
                     videos = videos.permute(0, 2, 1, 3, 4)  # [B, C, F, H, W]
@@ -680,6 +691,8 @@ def main(args):
                 video_latents = latent_dist.sample() * VAE_SCALING_FACTOR
                 video_latents = video_latents.permute(0, 2, 1, 3, 4)  # [B, F, C, H, W]
                 video_latents = video_latents.to(memory_format=torch.contiguous_format, dtype=weight_dtype)
+                
+                # print("AFTER ENCODE...", rp.toc(),"SECONDS")  #2.8873074054718018  seconds - as expected!
 
                 padding_shape = (video_latents.shape[0], video_latents.shape[1] - 1, *video_latents.shape[2:])
                 latent_padding = image_latents.new_zeros(padding_shape)
