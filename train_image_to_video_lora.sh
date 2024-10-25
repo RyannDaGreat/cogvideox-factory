@@ -5,7 +5,6 @@ export NCCL_P2P_DISABLE=1
 export TORCH_NCCL_ENABLE_MONITORING=0
 
 GPU_IDS="0,1,2,3,4,5,6,7"
-# GPU_IDS="4"
 
 # Training Configurations
 # Experiment with as many hyperparameters as you want!
@@ -84,7 +83,7 @@ for learning_rate in "${LEARNING_RATES[@]}"; do
           --dataloader_num_workers $NUM_DATAWORKERS \
           --pin_memory \
           --validation_prompt \"BW_STYLE A panda, dressed in a small, red jacket and a tiny hat, sits on a wooden stool in a serene bamboo forest. The panda's fluffy paws strum a miniature acoustic guitar, producing soft, melodic tunes. Nearby, a few other pandas gather, watching curiously and some clapping in rhythm. Sunlight filters through the tall bamboo, casting a gentle glow on the scene. The panda's face is expressive, showing concentration and joy as it plays. The background includes a small, flowing stream and vibrant green foliage, enhancing the peaceful and magical atmosphere of this unique musical performance\" \
-          --validation_images \"/path/to/image1.png:::/path/to/image2.png\"
+          --validation_images \"/root/CleanCode/Github/cogvideox-factory/datasets/firstframe_panda.jpg\" \
           --validation_prompt_separator ::: \
           --num_validation_videos 1 \
           --validation_epochs $VALIDATION_EPOCHS \
