@@ -454,6 +454,13 @@ def _get_configuration_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+
+def _get_ryan_data_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--ryan_data_debug"                , type=str, default=None)
+    parser.add_argument("--ryan_data_post_noise_alpha"     , type=str, default=None)
+    parser.add_argument("--ryan_data_delegator_address"    , type=str, default=None)
+    parser.add_argument("--ryan_data_noise_downtemp_interp", type=str, default=None)
+    
 def get_args():
     parser = argparse.ArgumentParser(description="Simple example of a training script for CogVideoX.")
 
@@ -463,5 +470,6 @@ def get_args():
     _get_validation_args(parser)
     _get_optimizer_args(parser)
     _get_configuration_args(parser)
+    _get_ryan_data_args(parser)
 
     return parser.parse_args()

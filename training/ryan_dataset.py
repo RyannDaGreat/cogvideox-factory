@@ -138,7 +138,7 @@ get_sample_iterator = rp.lazy_par_map(
     buffer_limit=10,
 )
 
-def get_sample(index=None):
+def get_sample(index=None, args={}):
     """
     EXAMPLE:
         >>> sample = get_sample()
@@ -153,6 +153,15 @@ def get_sample(index=None):
         >>> sample.instance_noise.shape
         ans = torch.Size([49, 16, 60, 90])
     """
+
+    kwargs = {}
+    #See args.py to add more args
+    if args.ryan_data_debug                 is not None: kwargs['debug'                ] = rp.exeval(args.ryan_data_debug           )
+    if args.ryan_data_post_noise_alpha      is not None: kwargs['post_noise_alpha'     ] = rp.exeval(args.ryan_data_post_noise_alpha)
+    if args.ryan_data_delegator_address     is not None: kwargs['delegator_address'    ] =           args.ryan_data_delegator_address
+    if args.ryan_data_noise_downtemp_interp is not None: kwargs['noise_downtemp_interp'] =           args.ryan_data_noise_downtemp_interp
+    rp.fansi_print(f"ryan_dataset.get_sample: kwargs={kwargs}",'yellow')
+
     while True:
         try:
             output = next(get_sample_iterator)
