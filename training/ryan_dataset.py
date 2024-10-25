@@ -44,6 +44,7 @@ def get_sample_helper(
         debug=False,
         post_noise_alpha=[0,1],
         delegator_address='100.113.78.238',
+        noise_downtemp_interp='nearest',
     ):
     rp.sleep(rp.random_int(1)) #Space them out to prevent errors? Idk....connection reset bs...maybe the webevaluator delegation server can be overloaded by too many requests at a time and just hangs up? I've never tested that??
 
@@ -87,22 +88,38 @@ def get_sample_helper(
     sample.noise = einops.rearrange(sample.noise, 'T H W C -> T C H W')
     sample.noise = torch.Tensor(sample.noise)
 
+    assert noise_downtemp_interp in {'nearest', 'blend', 'blend_norm'}, noise_downtemp_interp
+    if   noise_downtemp_interp == 'nearest'    : sample.noise_downtemp = rp.resize_list(sample.noise, 13)
+    elif noise_downtemp_interp == 'blend'      : sample.noise_downtemp =                   downsamp_mean(sample.noise, 13)
+    elif noise_downtemp_interp == 'blend_norm' : sample.noise_downtemp = normalized_noises(downsamp_mean(sample.noise, 13))
+    else: assert False, 'impossible'
+    
     #Rename variables for CogVid's codebase
     output = rp.as_easydict(
-        instance_prompt = sample.text,
-        instance_video = sample.pixel_values,
-        instance_noise = sample.noise,
+        prompt = sample.text,
+        video = sample.pixel_values,
+        image = sample.pixel_values[0],
+        metadata = {'num_frames': 49, 'height': 480, 'width': 720, 'noise_downtemp_interp': noise_downtemp_interp},
+
+        #New fields
+        noise = sample.noise,
+        noise_downtemp = sample.noise_downtemp,
     )
 
     #Modify this as you code - for clarity.
-    assert set('instance_noise instance_video instance_prompt'.split()) == set(output)
+    assert set('prompt video image metadata noise noise_downtemp'.split()) == set(output)
 
     if debug:
         #For debugging
-        print(f'get_sample({index}):')
-        print(f'    • instance_prompt = {output.instance_prompt}')
-        print(f'    • instance_video.shape = {output.instance_video.shape}')
-        print(f'    • instance_noise.shape = {output.instance_noise.shape}')
+        rp.print_lines(
+            f'get_sample({index}):',
+            f'    • prompt = {output.instance_prompt}',
+            f'    • image.shape = {output.image.shape}',
+            f'    • video.shape = {output.video.shape}',
+            f'    • metadata = {output.metadata}',
+            f'    • noise.shape = {output.noise.shape}',
+            f'    • noise_downtemp.shape = {output.instance_prompt}',
+        )
     
     return output
 
