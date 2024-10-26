@@ -207,10 +207,13 @@ def run_pipe(pipe, cartridge, subfolder="first_subfolder"):
 
     sample_gif=load_video(cartridge.metadata.sample_gif_path)
     video=as_numpy_images(video)
-    prevideo=horizontally_concatenated_videos(resize_list(video,len(sample_gif)),sample_gif)
+    prevideo = horizontally_concatenated_videos(
+        video,
+        resize_list(sample_gif, len(video)),
+    )
     preview_mp4_path=rp.save_video_mp4(prevideo, output_mp4_path+'_preview.mp4',framerate=16)
 
-    return gather_vars('output_mp4_path preview_mp4_path cartridge subfolder')
+    return gather_vars('video output_mp4_path preview_mp4_path cartridge subfolder preview_mp4_path')
 
 
 # #prompt = "A little girl is riding a bicycle at high speed. Focused, detailed, realistic."
