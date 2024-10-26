@@ -170,3 +170,5 @@ wandb/
 dump*
 
 !requirements.txt
+
+infer_outputs
