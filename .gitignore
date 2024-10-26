@@ -172,3 +172,12 @@ dump*
 !requirements.txt
 
 infer_outputs
+
+#<RP Default Gitignore Start>
+*.pyc
+*.swo
+*.swp
+*.un~
+*.DS_Store
+#<RP Default Gitignore End>
+
