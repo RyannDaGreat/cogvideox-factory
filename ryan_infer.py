@@ -14,13 +14,13 @@ pipe_ids = dict(
 )
 
 lora_paths = dict(
-    x5b_RDeg_i9800         = '/root/CleanCode/Github/CogVideo/finetune/cogvideox5b-lora-single-node-delegator-noisewarp-Oct16-RandomDegradation-LargerBatchSize-SmallLearnRate/checkpoint-9800/saved_weights_copy/pytorch_lora_weights.safetensors',
-    x5b_0Deg_L512_ND_i1200 = '/root/CleanCode/Github/CogVideo/finetune/cogvideox5b-lora-single-node-delegator-noisewarp-Oct16-RandomDegradation-LargerBatchSize-SmallLearnRate-LORA512-0Degrad/checkpoint-1200/saved_weights_copy/pytorch_lora_weights.safetensors',
-    x2b_RDeg_i30000        = '/root/CleanCode/Github/CogVideo/finetune/cogvideox2b-lora-single-node-delegator-noisewarp-Oct16-RandomDegradation-LargerBatchSize-SmallLearnRate/checkpoint-30000/saved_weights_copy/pytorch_lora_weights.safetensors',
-    x5b_RDeg_L2048_i4800   = '/root/CleanCode/Github/CogVideo/finetune/cogvideox5b-lora-noisewarp-Oct23-LORA2048-RandDegrad-BlendNoiseWithoutNorm/checkpoint-4800/saved_weights_copy/pytorch_lora_weights.safetensors',
+    T2V5B_RDeg_i9800         = '/root/CleanCode/Github/CogVideo/finetune/cogvideox5b-lora-single-node-delegator-noisewarp-Oct16-RandomDegradation-LargerBatchSize-SmallLearnRate/checkpoint-9800/saved_weights_copy/pytorch_lora_weights.safetensors',
+    T2V5B_0Deg_L512_ND_i1200 = '/root/CleanCode/Github/CogVideo/finetune/cogvideox5b-lora-single-node-delegator-noisewarp-Oct16-RandomDegradation-LargerBatchSize-SmallLearnRate-LORA512-0Degrad/checkpoint-1200/saved_weights_copy/pytorch_lora_weights.safetensors',
+    T2V2B_RDeg_i30000        = '/root/CleanCode/Github/CogVideo/finetune/cogvideox2b-lora-single-node-delegator-noisewarp-Oct16-RandomDegradation-LargerBatchSize-SmallLearnRate/checkpoint-30000/saved_weights_copy/pytorch_lora_weights.safetensors',
+    T2V5B_RDeg_L2048_i4800   = '/root/CleanCode/Github/CogVideo/finetune/cogvideox5b-lora-noisewarp-Oct23-LORA2048-RandDegrad-BlendNoiseWithoutNorm/checkpoint-4800/saved_weights_copy/pytorch_lora_weights.safetensors',
     # ...
-    x5b_i2v_webvid_i2600   = '/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__degrad=0,1__downtemp=nearest__lr=1e-4__2024-10-25T14-52-57-0400/checkpoint-2600/pytorch_lora_weights.safetensors' #Oct26, 3:45AM
-    x5b_i2v_webvid_i3200   = '/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__degrad=0,1__downtemp=nearest__lr=1e-4__2024-10-25T14-52-57-0400/checkpoint-3200/pytorch_lora_weights.safetensors' #Oct26, 6:50AM
+    I2V5B_i2v_webvid_i2600   = '/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__degrad=0,1__downtemp=nearest__lr=1e-4__2024-10-25T14-52-57-0400/checkpoint-2600/pytorch_lora_weights.safetensors', #Oct26, 3:45AM
+    I2V5B_i2v_webvid_i3200   = '/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__degrad=0,1__downtemp=nearest__lr=1e-4__2024-10-25T14-52-57-0400/checkpoint-3200/pytorch_lora_weights.safetensors', #Oct26, 6:50AM
 )
 #To get the trained LoRA paths:
 #     >>> lora_paths=glob.glob('/root/CleanCode/Github/CogVideo/finetune/*/*/saved_weights_copy/pytorch_lora_weights.safetensors') #For Old Training Codebase (T2V)
@@ -41,8 +41,14 @@ num_frames=(F-1)*4+1 #https://miro.medium.com/v2/resize:fit:1400/format:webp/0*z
 #Possible num_frames: 1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49
 assert num_frames==49
 
+def get_pipe(pipe_name=None, lora_name=None, device=None):
+    assert pipe_name is not None or lora_name is not None
 
-def get_pipe(pipe_name="T2V5B", lora_name=None, device=None):
+    if pipe_name is None and isinstance(lora_name, str):
+        #By convention, we have lora_paths that start with the pipe names - such as 
+        fansi_print(f"Getting pipe name from lora_name={lora_name}",'cyan','bold')
+        pipe_name = lora_name.split('_')[0]
+
     pipe_id = pipe_ids[pipe_name]
 
     print(f"LOADING PIPE WITH device={device} pipe_id={pipe_id} lora_name={lora_name}")
@@ -151,15 +157,53 @@ def load_sample_cartridge(
 
     return gather_vars('prompt noise image video metadata settings')
 
-def get_output_path(pipe, cartridge, subfolder:str, output_root:str="infer_outputs"):
+def dict_to_name(d=None, **kwargs):
+    """
+    Used to generate MP4 file names
+    
+    EXAMPLE:
+        >>> dict_to_name(dict(a=5,b='hello',c=None))
+        ans = a=5,b=hello,c=None
+        >>> name_to_dict(ans)
+        ans = {'a': '5', 'b': 'hello', 'c': 'None'}
+    """
+    if d is None:
+        d = {}
+    d.update(kwargs)
+    return ",".join("=".join(map(str, [key, value])) for key, value in d.items())
+
+def name_to_dict(name):
+    """
+    Useful for analyzing output MP4 files
+
+    EXAMPLE:
+        >>> dict_to_name(dict(a=5,b='hello',c=None))
+        ans = a=5,b=hello,c=None
+        >>> name_to_dict(ans)
+        ans = {'a': '5', 'b': 'hello', 'c': 'None'}
+    """
+    output=rp.as_easydict()
+    for entry in name.split(','):
+        key,value=entry.split('=',maxsplit=1)
+        output[key]=value
+    return output
+
+
+def get_output_path(pipe, cartridge, subfolder:str, output_root:str):
+    """
+    Generates a unique output path for saving a generated video.
+
+    Args:
+        pipe: The video generation pipeline used.
+        cartridge: Data used for generating the video.
+        subfolder (str): Subfolder for saving the video.
+        output_root (str): Root directory for output videos.
+
+    Returns:
+        String representing the unique path to save the video.
+    """
 
     time = millis()
-
-    def dict_to_name(d=None, **kwargs):
-        if d is None:
-            d = {}
-        d.update(kwargs)
-        return ",".join("=".join(map(str, [key, value])) for key, value in d.items())
 
     output_name = (
         dict_to_name(
@@ -187,8 +231,8 @@ def get_output_path(pipe, cartridge, subfolder:str, output_root:str="infer_outpu
 
     return output_path
 
-def run_pipe(pipe, cartridge, subfolder="first_subfolder"):
-    output_mp4_path = get_output_path(pipe, cartridge, subfolder)
+def run_pipe(pipe, cartridge, subfolder="first_subfolder", output_root:str="infer_outputs"):
+    output_mp4_path = get_output_path(pipe, cartridge, subfolder, output_root)
     
     video = pipe(
         prompt=cartridge.prompt,
@@ -225,24 +269,138 @@ def run_pipe(pipe, cartridge, subfolder="first_subfolder"):
 # prompt = "A bunch of puppies running around a front lawn in a giant courtyard "
 # #image = load_image(image=download_url_to_cache("https://media.sciencephoto.com/f0/22/69/89/f0226989-800px-wm.jpg"))
 
+def main(
+    lora_name='I2V5B_i2v_webvid_i3200',
+    pipe_name=None,
+    device=None,
+    output_root='infer_outputs',
+    subfolder='default_subfolder',
 
-pipes = []
-if 0 or not pipes:
-    for device in get_all_gpu_ids()[:2]:
-        pipes.append(
-            get_pipe(
-                pipe_name="I2V5B",
-                lora_name="x5b_i2v_webvid_i2600",
-                device=device,
-            )
+    #BROADCASTABLE:
+    sample_path=None,
+    degradation=0,
+    noise_downtemp_interp='nearest',
+    image=None,
+    prompt=None,
+    num_inference_steps=30,
+):
+    """
+    Main function to run the video generation pipeline with specified parameters.
+
+    Args:
+        pipe_name (str): Name of the pipeline to use ('T2V5B', 'T2V2B', 'I2V5B').
+        lora_name (str): Name of the LoRA weights to load.
+        device (str or int, optional): Device to run the model on (e.g., 'cuda:0' or 0).
+        output_root (str): Root directory where output videos will be saved.
+        subfolder (str): Subfolder within output_root to save outputs.
+        sample_path (str or list, optional): Broadcastable. Path(s) to the sample `.pkl` file(s).
+        degradation (float or list): Broadcastable. Degradation level(s) for the noise warp (float between 0 and 1).
+        noise_downtemp_interp (str or list): Broadcastable. Interpolation method(s) for down-temporal noise. Options: 'nearest', 'blend', 'blend_norm'.
+        image (str, PIL.Image, or list, optional): Broadcastable. Image(s) to use as the initial frame(s). Can be a URL or a path to an image.
+        prompt (str or list, optional): Broadcastable. Text prompt(s) for video generation.
+        num_inference_steps (int or list): Broadcastable. Number of inference steps for the pipeline.
+    """
+
+    if device is None:
+        device = rp.select_torch_device(reserve=True, prefer_used=True)
+        fansi_print(f"Selected torch device: {device}")
+
+
+    cartridge_kwargs = rp.broadcast_kwargs(
+        rp.gather_vars(
+            "sample_path",
+            "degradation",
+            "noise_downtemp_interp",
+            "image",
+            "prompt",
+            "num_inference_steps",
         )
-    
-cartridges = []
-for _ in pipes:
-    cartridges.append(
-        load_sample_cartridge(
-            num_inference_steps=30,
+    )
+
+    rp.fansi_print("cartridge_kwargs:", "cyan", "bold")
+    print(
+        rp.indentify(
+            rp.with_line_numbers(
+                rp.fansi_pygments(
+                    rp.autoformat_json(cartridge_kwargs),
+                    "json",
+                ),
+                align=True,
+            )
         ),
     )
 
-run_pipe(pipes[0],cartridges[0])
+    cartridges = [load_sample_cartridge(**x) for x in cartridge_kwargs]
+    pipe = get_pipe(pipe_name, lora_name, device)
+
+    for cartridge in cartridges:
+        run_pipe(
+            pipe=pipe,
+            cartridge=cartridge,
+            output_root=output_root,
+            subfolder=subfolder,
+        )
+
+if __name__ == '__main__':
+    import fire
+    fire.Fire(main)
+
+
+
+if False:
+    #Some code I write for myself as a reference. Maybe run it in rp.
+
+
+
+    sample_paths = [
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/clump_grub.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/amuse_chop.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/chomp_shop.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/carve_stem.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/ajar_payer.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/alive_smog.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/balmy_rerun.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/busy_proof.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/brisk_stump.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/blunt_swab.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/blunt_clay.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/blog_voice.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/bless_life.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/bleak_skier.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/bless_banjo.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/balmy_smash.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/balmy_fetch.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/arise_clear.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/argue_life.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/alien_wagon.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/ahead_shred.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/agile_wing.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/agile_lent.pkl.gif",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/agile_train.pkl.gif",
+    ]
+
+
+
+
+
+    import ryan_infer
+
+    ryan_infer.main(
+        sample_path=[
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/bless_banjo.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/balmy_smash.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/balmy_fetch.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/arise_clear.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/argue_life.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/alien_wagon.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/ahead_shred.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/agile_wing.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/agile_lent.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/agile_train.pkl",
+        ],
+        #lora_name="I2V5B_i2v_webvid_i3200",
+        lora_name=None,
+        degradation=0,
+        noise_downtemp_interp='blend_norm',
+        subfolder='abusing_nolora_blendnorm',
+    )
