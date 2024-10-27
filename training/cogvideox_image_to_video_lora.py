@@ -1013,7 +1013,7 @@ def main(args):
 if __name__ == "__main__":
     args = get_args()
 
-    import ryan_dataset
-    ryan_dataset.process_args |= args.__dict__
+    import rp.r_iterm_comm as ric
+    ric.process_args.update(args.__dict__) #Is updated in the ...lora.py script
 
     main(args)

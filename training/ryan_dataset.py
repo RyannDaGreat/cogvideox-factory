@@ -40,13 +40,17 @@ import sys
 sys.path.append("/root/CleanCode/Github/AnimateDiff_Ning")
 import animatediff.data.dataset as ds
 
+_sample_helper_kwargs={}
 def get_sample_helper(
         index,
-        debug=False,
-        post_noise_alpha=[0,1],
-        delegator_address='100.113.78.238',
-        noise_downtemp_interp='nearest',
     ):
+
+    #These used to be kwargs passed to this function. Not any more - they're global now. Because they're always the same...
+    debug                 = _sample_helper_kwargs['debug'                ] # debug=False,
+    post_noise_alpha      = _sample_helper_kwargs['post_noise_alpha'     ] # post_noise_alpha=[0,1],
+    delegator_address     = _sample_helper_kwargs['delegator_address'    ] # delegator_address='100.113.78.238',
+    noise_downtemp_interp = _sample_helper_kwargs['noise_downtemp_interp'] # noise_downtemp_interp='nearest',
+
     rp.sleep(rp.random_int(1)) #Space them out to prevent errors? Idk....connection reset bs...maybe the webevaluator delegation server can be overloaded by too many requests at a time and just hangs up? I've never tested that??
 
     if 1 or debug:
@@ -110,12 +114,12 @@ def get_sample_helper(
         #For debugging
         rp.print_lines(
             f'get_sample({index}):',
-            f'    • prompt = {output.instance_prompt}',
+            f'    • prompt = {output.prompt}',
             f'    • image.shape = {output.image.shape}',
             f'    • video.shape = {output.video.shape}',
             f'    • video_metadata = {output.video_metadata}',
             f'    • noise.shape = {output.noise.shape}',
-            f'    • noise_downtemp.shape = {output.instance_prompt}',
+            f'    • noise_downtemp.shape = {output.noise_downtemp.shape}',
         )
     
     return output
@@ -144,7 +148,8 @@ get_sample_iterator = rp.lazy_par_map(
     buffer_limit=10,
 )
 
-process_args = {} #Is updated in the ...lora.py script
+import rp.r_iterm_comm as ric
+ric.process_args = {} #Is updated in the ...lora.py script
 
 def get_sample(index=None):
     """
@@ -162,13 +167,12 @@ def get_sample(index=None):
         ans = torch.Size([49, 16, 60, 90])
     """
     
-    kwargs = {}
     #See args.py to add more args
-    if 'ryan_data_debug'                 in process_args: kwargs['debug'                ] = rp.exeval(process_args['ryan_data_debug'                ])
-    if 'ryan_data_post_noise_alpha'      in process_args: kwargs['post_noise_alpha'     ] = rp.exeval(process_args['ryan_data_post_noise_alpha'     ])
-    if 'ryan_data_delegator_address'     in process_args: kwargs['delegator_address'    ] =           process_args['ryan_data_delegator_address'    ]
-    if 'ryan_data_noise_downtemp_interp' in process_args: kwargs['noise_downtemp_interp'] =           process_args['ryan_data_noise_downtemp_interp']
-    rp.fansi_print(f"ryan_dataset.get_sample: kwargs={kwargs}",'yellow')
+    if 'ryan_data_debug'                 in ric.process_args: _sample_helper_kwargs['debug'                ] = rp.exeval(ric.process_args['ryan_data_debug'                ])
+    if 'ryan_data_post_noise_alpha'      in ric.process_args: _sample_helper_kwargs['post_noise_alpha'     ] = rp.exeval(ric.process_args['ryan_data_post_noise_alpha'     ])
+    if 'ryan_data_delegator_address'     in ric.process_args: _sample_helper_kwargs['delegator_address'    ] =           ric.process_args['ryan_data_delegator_address'    ]
+    if 'ryan_data_noise_downtemp_interp' in ric.process_args: _sample_helper_kwargs['noise_downtemp_interp'] =           ric.process_args['ryan_data_noise_downtemp_interp']
+    rp.fansi_print(f"ryan_dataset.get_sample: _sample_helper_kwargs={_sample_helper_kwargs}",'yellow')
 
     while True:
         try:
