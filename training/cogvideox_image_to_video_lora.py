@@ -60,7 +60,7 @@ from text_encoder import compute_prompt_embeddings  # isort:skip
 from utils import get_gradient_norm, get_optimizer, prepare_rotary_positional_embeddings, print_memory, reset_memory  # isort:skip
 
 import rp
-
+import rp.r_iterm_comm as ric
 
 logger = get_logger(__name__)
 
@@ -632,7 +632,7 @@ def main(args):
         initial_global_step = 0
     else:
         if args.resume_from_checkpoint != "latest":
-            path = os.path.basename(args.resume_from_checkpoint)
+            path = args.resume_from_checkpoint
         else:
             # Get the most recent checkpoint
             dirs = os.listdir(args.output_dir)
@@ -647,9 +647,13 @@ def main(args):
             args.resume_from_checkpoint = None
             initial_global_step = 0
         else:
-            accelerator.print(f"Resuming from checkpoint {path}")
-            accelerator.load_state(os.path.join(args.output_dir, path))
-            global_step = int(path.split("-")[1])
+            # accelerator.print(f"Resuming from checkpoint {path}")
+            rp.fansi_print(f"Resuming from checkpoint {path}", 'yellow','bold','black')
+            accelerator.load_state(path)
+
+            #Given something like outputs/models/cogx-lora-i2v__degrad=0,1__downtemp=nearest__lr=1e-4__2024-10-25T14-52-57-0400/checkpoint-3200
+            #then global_step is 3200
+            global_step = int(path.split("-")[-1])
 
             initial_global_step = global_step
             first_epoch = global_step // num_update_steps_per_epoch
@@ -837,6 +841,7 @@ def main(args):
 
                         save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
                         accelerator.save_state(save_path)
+                        rp.save_json(ric.process_args, rp.path_join(save_path,'process_args.json'), pretty=True)
                         logger.info(f"Saved state to {save_path}")
 
             last_lr = lr_scheduler.get_last_lr()[0] if lr_scheduler is not None else args.learning_rate
@@ -1013,7 +1018,6 @@ def main(args):
 if __name__ == "__main__":
     args = get_args()
 
-    import rp.r_iterm_comm as ric
     ric.process_args.update(args.__dict__) #Is updated in the ...lora.py script
 
     main(args)

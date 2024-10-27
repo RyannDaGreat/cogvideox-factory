@@ -36,13 +36,22 @@ CHECKPOINTING_STEPS=200 #Default=1000
 VALIDATION_EPOCHS=100 #Default: 10, equivalent to 690 here
 
 ryan_data_debug='True'
-ryan_data_post_noise_alpha='0,1'
+ryan_data_post_noise_alpha='0'
 ryan_data_delegator_address='100.118.167.201'
 ryan_data_noise_downtemp_interp='blend_norm' #nearest, blend, blend_norm
 
 #Get a unique date string so we can have a unique output folder
 export TZ="America/New_York"
 DATESTRING=$(date +"%Y-%m-%dT%H-%M-%S%z")
+
+#All trained checkpoints we care about so far...
+CHECKPOINT_I2V5B_i2v_webvid_i3200="outputs/models/cogx-lora-i2v__degrad=0,1__downtemp=nearest__lr=1e-4__2024-10-25T14-52-57-0400/checkpoint-3200"
+
+# Set the resume checkpoint based on a variable. Or, comment them all out to NOT resume from a checkpoint.
+RESUME_TITLE="CHECKPOINT_I2V5B_i2v_webvid_i3200" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
+
+
+HANDWRITTEN_TITLE="ZeroDegrad"
 
 #Notes:
 # don't worry about id_token our dataset overrides the prompt generation it doesn't matter
@@ -55,14 +64,14 @@ for learning_rate in "${LEARNING_RATES[@]}"; do
 
         #RYAN: Use a local directory on this computer so it  never halts. But also, periodically sync it.
         # output_dir_local="outputs/models/cogvideox-lora__optimizer_${optimizer}__steps_${steps}__lr-schedule_${lr_schedule}__learning-rate_${learning_rate}__${DATESTRING}/"
-        output_dir_local="outputs/models/cogx-lora-i2v__degrad=${ryan_data_post_noise_alpha}__downtemp=${ryan_data_noise_downtemp_interp}__lr=${learning_rate}__${DATESTRING}/"
+        output_dir_local="outputs/models/cogx-lora-i2v__${HANDWRITTEN_TITLE}__resume=${RESUME_TITLE}__degrad=${ryan_data_post_noise_alpha}__downtemp=${ryan_data_noise_downtemp_interp}__lr=${learning_rate}__${DATESTRING}/"
         output_dir="/COGVID_OUTPUTS/${output_dir_local}"
         mkdir -p $output_dir
         mkdir -p $output_dir_local
         # Start the syncing
         (
             while true; do
-                sleep 30  # sleep for 30 seconds
+                sleep 500  # sleep for 5 minutes
                 rsync -r "$output_dir" "$output_dir_local"
                 echo "rsync: Synced $output_dir to $output_dir_local!"
             done
@@ -72,7 +81,9 @@ for learning_rate in "${LEARNING_RATES[@]}"; do
         trap "echo 'Killing sync process with PID $syncing_pid'; kill $syncing_pid" EXIT
 
         cmd="accelerate launch --config_file $ACCELERATE_CONFIG_FILE --gpu_ids $GPU_IDS training/cogvideox_image_to_video_lora.py \
+          $( if [[ -n $RESUME_FROM_CHECKPOINT ]]; then echo "--resume_from_checkpoint $RESUME_FROM_CHECKPOINT"; fi ) \
           --pretrained_model_name_or_path THUDM/CogVideoX-5b-I2V \
+          --resume_from_checkpoint $RESUME_FROM_CHECKPOINT \
           --data_root $DATA_ROOT \
           --caption_column $CAPTION_COLUMN \
           --video_column $VIDEO_COLUMN \
