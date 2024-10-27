@@ -37,7 +37,7 @@ VALIDATION_EPOCHS=100 #Default: 10, equivalent to 690 here
 
 ryan_data_debug='True'
 ryan_data_post_noise_alpha='0,1'
-ryan_data_delegator_address='100.113.78.238'
+ryan_data_delegator_address='100.118.167.201'
 ryan_data_noise_downtemp_interp='blend_norm' #nearest, blend, blend_norm
 
 #Get a unique date string so we can have a unique output folder
