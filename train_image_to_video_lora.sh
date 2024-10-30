@@ -51,7 +51,7 @@ CHECKPOINT_I2V5B_i2v_webvid_i3200="outputs/models/cogx-lora-i2v__degrad=0,1__dow
 RESUME_TITLE="CHECKPOINT_I2V5B_i2v_webvid_i3200" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
 
 
-HANDWRITTEN_TITLE="ZeroDegrad"
+# HANDWRITTEN_TITLE="ZeroDegrad"
 
 #Notes:
 # don't worry about id_token our dataset overrides the prompt generation it doesn't matter
@@ -64,7 +64,7 @@ for learning_rate in "${LEARNING_RATES[@]}"; do
 
         #RYAN: Use a local directory on this computer so it  never halts. But also, periodically sync it.
         # output_dir_local="outputs/models/cogvideox-lora__optimizer_${optimizer}__steps_${steps}__lr-schedule_${lr_schedule}__learning-rate_${learning_rate}__${DATESTRING}/"
-        output_dir_local="outputs/models/cogx-lora-i2v__${HANDWRITTEN_TITLE}__resume=${RESUME_TITLE}__degrad=${ryan_data_post_noise_alpha}__downtemp=${ryan_data_noise_downtemp_interp}__lr=${learning_rate}__${DATESTRING}/"
+        output_dir_local="outputs/models/cogx-lora-i2v__${HANDWRITTEN_TITLE}__resume=${RESUME_TITLE}__degrad=${ryan_data_post_noise_alpha}__downtemp=${ryan_data_noise_downtemp_interp}__lr=${learning_rate}__rank={$RANK}__${DATESTRING}/"
         output_dir="/COGVID_OUTPUTS/${output_dir_local}"
         mkdir -p $output_dir
         mkdir -p $output_dir_local

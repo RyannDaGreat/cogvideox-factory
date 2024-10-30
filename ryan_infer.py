@@ -23,7 +23,10 @@ lora_paths = dict(
     I2V5B_i2v_webvid_i3200   = '/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__degrad=0,1__downtemp=nearest__lr=1e-4__2024-10-25T14-52-57-0400/checkpoint-3200/pytorch_lora_weights.safetensors', #Oct26, 6:50AM
 
     I2V5B_resum_blendnorm_0degrad_i5000_webvid = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__ZeroDegrad__resume=CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0__downtemp=blend_norm__lr=1e-4__2024-10-27T04-42-17-0400/checkpoint-5000/pytorch_lora_weights.safetensors",
+    I2V5B_resum_blendnorm_0degrad_i7600_webvid = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__ZeroDegrad__resume=CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0__downtemp=blend_norm__lr=1e-4__2024-10-27T04-42-17-0400/checkpoint-7600/pytorch_lora_weights.safetensors",
     I2V5B_resum_blendnorm_i5400_webvid         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v_CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0,1__downtemp=blend_norm__lr=1e-4__2024-10-27T04-18-13-0400/checkpoint-5200/pytorch_lora_weights.safetensors",
+    I2V5B_resum_blendnorm_i6400_webvid         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v_CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0,1__downtemp=blend_norm__lr=1e-4__2024-10-27T04-18-13-0400/checkpoint-6400/pytorch_lora_weights.safetensors",
+    I2V5B_resum_blendnorm_i7600_webvid         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v_CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0,1__downtemp=blend_norm__lr=1e-4__2024-10-27T04-18-13-0400/checkpoint-7600/pytorch_lora_weights.safetensors",
 )
 #To get the trained LoRA paths:
 #     >>> lora_paths =glob.glob('/root/CleanCode/Github/CogVideo/finetune/*/*/saved_weights_copy/pytorch_lora_weights.safetensors') #For Old Training Codebase (T2V)
@@ -45,6 +48,7 @@ num_frames=(F-1)*4+1 #https://miro.medium.com/v2/resize:fit:1400/format:webp/0*z
 #Possible num_frames: 1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49
 assert num_frames==49
 
+@memoized #Torch never manages to unload it from memory anyway
 def get_pipe(pipe_name=None, lora_name=None, device=None):
     assert pipe_name is not None or lora_name is not None
 
@@ -98,6 +102,7 @@ def load_sample_cartridge(
     prompt=None,
     #SETTINGS:
     num_inference_steps=30,
+    guidance_scale=6,
 ):
     """
     COMPLETELY FROM SAMPLE: Generate with /root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidSampleGenerator.ipynb
@@ -150,7 +155,7 @@ def load_sample_cartridge(
     else                        : sample_image = rp.as_pil_image(rp.as_rgb_image(image))
 
     metadata = gather_vars('sample_path degradation downtemp_noise sample_gif_path sample_video sample_noise noise_downtemp_interp')
-    settings = gather_vars('num_inference_steps')
+    settings = gather_vars('num_inference_steps guidance_scale')
 
     if noise  is None: noise  = downtemp_noise
     if video  is None: video  = sample_video
@@ -235,19 +240,29 @@ def get_output_path(pipe, cartridge, subfolder:str, output_root:str):
 
     return output_path
 
-def run_pipe(pipe, cartridge, subfolder="first_subfolder", output_root:str="infer_outputs"):
+def run_pipe(
+    pipe,
+    cartridge,
+    subfolder="first_subfolder",
+    output_root: str = "infer_outputs",
+):
     output_mp4_path = get_output_path(pipe, cartridge, subfolder, output_root)
     
+    if pipe.is_i2v:
+        image = cartridge.image
+        if isinstance(image, str):
+            image = rp.as_pil_image(rp.load_image(image, use_cache=True))
+
     video = pipe(
         prompt=cartridge.prompt,
-        **(dict(image=cartridge.image) if pipe.is_i2v else {}),
+        **(dict(image=image) if pipe.is_i2v else {}),
         num_inference_steps=cartridge.settings.num_inference_steps,
         latents=cartridge.noise.to(pipe.device),
 
         # FYI, SOME OTHER DEFAULT VALUES:
         # num_videos_per_prompt=1,
         # num_frames=num_frames,
-        # guidance_scale=6,
+        guidance_scale=cartridge.settings.guidance_scale,
         # generator=torch.Generator(device=device).manual_seed(42),
     ).frames[0]
 
@@ -287,6 +302,7 @@ def main(
     image=None,
     prompt=None,
     num_inference_steps=30,
+    guidance_scale=6,
 ):
     """
     Main function to run the video generation pipeline with specified parameters.
@@ -318,6 +334,7 @@ def main(
             "image",
             "prompt",
             "num_inference_steps",
+            "guidance_scale",
         )
     )
 
@@ -400,3 +417,58 @@ if False:
         noise_downtemp_interp="blend_norm",
         subfolder="abusing_nolora_blendnorm",
     )
+
+if False:
+    #Some code I made to turn the previous block into comparison videos...
+
+    from rp import *
+
+
+    def get_sample_name(path):
+        # Return something like alive_smog from /root/CleanCode/Github/cogvideox-factory/infer_outputs/I2V5B_resum_blendnorm_i5400_webvid__infer=.5degrad/t=1730057038048,pipe=I2V5B,lora=I2V5B_resum_blendnorm_i5400_webvid,steps=30,degrad=0.5,downtemp=blend_norm,samp=alive_smog.mp4
+        return path.split("=")[-1].split(".")[0]
+
+
+    folder_paths, titles = list_transpose(
+        [
+            # ["/root/CleanCode/Github/cogvideox-factory/infer_outputs/T2V5B_RDeg_L2048_i4800__infer=.5degrad", ""],
+            # ["/root/CleanCode/Github/cogvideox-factory/infer_outputs/T2V2B_RDeg_i30000__infer=.5degrad", ""],
+            # ["/root/CleanCode/Github/cogvideox-factory/infer_outputs/t2v5b_tests", ""],
+            ["/root/CleanCode/Github/cogvideox-factory/infer_outputs/i2v5b_nolora_nowarp", "Original CogVidX I2V Model (No LoRA or noisewarping) WITH Prompts"],
+            ["/root/CleanCode/Github/cogvideox-factory/infer_outputs/I2V5B_nolora_webvid___infer___noprompt", "Original CogVidX I2V Model (No LoRA or noisewarping) WITH NO Prompts"],
+            ["/root/CleanCode/Github/cogvideox-factory/infer_outputs/I2V5B_resum_blendnorm_i7600_webvid___infer___degrad=.5", "Normalized Blended Noise WITH Prompts"],
+            ["/root/CleanCode/Github/cogvideox-factory/infer_outputs/I2V5B_resum_blendnorm_i7600_webvid___infer___degrad=.5,noprompt", "Normalized Blended Noise WITH NO Prompts"],
+        ]
+    )
+
+    folder_names = get_folder_names(folder_paths)
+    titles = [t + ": " + fn for fn, t in zip(folder_names, titles)]
+
+    mp4s = rp_glob(x + "/*.mp4" for x in folder_paths)
+    mp4s = [x for x in mp4s if not x.endswith(".mp4_preview.mp4")]
+    mp4_bundles = cluster_by_key(mp4s, get_sample_name)
+    mp4_bundles = [x for x in mp4_bundles if len(x) == len(folder_paths)]
+
+    def process_bundle(mp4_bundle, show_progress=False):
+        for i in range(len(mp4_bundle)):
+            mp4_bundle[i] += "_preview.mp4"
+        sample_name = get_sample_name(mp4_bundle[0])  # Index doesnt matter
+        videos = load_videos(mp4_bundle, show_progress=show_progress, use_cache=True)
+        videos = labeled_videos(videos, get_file_names(mp4_bundle), background_color="dark green")
+        videos = labeled_videos(videos, titles, size=25, background_color="dark green")
+        preview_video = vertically_concatenated_videos(videos)
+
+        preview_file = sample_name + ".mp4"
+        preview_file = get_unique_copy_path(preview_file)
+        output_mp4 = save_video_mp4(preview_video, preview_file, show_progress=show_progress, framerate=12)
+        fansi_print("SAVED " + fansi_highlight_path(output_mp4), "green")
+        return output_mp4
+
+    # Output Directory
+    output_dir = "/root/CleanCode/Github/cogvideox-factory/untracked/comparison_outputs"
+    if not folder_is_empty(output_dir):
+        output_dir = get_unique_copy_path(output_dir)
+    take_directory(output_dir)
+    fansi_print(f"output_dir = {fansi_highlight_path(output_dir)}", "cyan", "bold")
+
+    load_files(process_bundle, mp4_bundles, show_progress=True, num_threads=None)
