@@ -37,7 +37,8 @@ VALIDATION_EPOCHS=100 #Default: 10, equivalent to 690 here
 
 ryan_data_debug='True'
 ryan_data_post_noise_alpha='0'
-ryan_data_delegator_address='100.118.167.201'
+# ryan_data_delegator_address='100.118.128.153'
+ryan_data_delegator_address="$(cat /root/CleanCode/Github/AnimateDiff_Ning/animatediff/data/delegator_address.txt)" #Now we just auto-save it when we run the delagator server
 ryan_data_noise_downtemp_interp='blend_norm' #nearest, blend, blend_norm
 
 #Get a unique date string so we can have a unique output folder
@@ -45,10 +46,11 @@ export TZ="America/New_York"
 DATESTRING=$(date +"%Y-%m-%dT%H-%M-%S%z")
 
 #All trained checkpoints we care about so far...
-CHECKPOINT_I2V5B_i2v_webvid_i3200="outputs/models/cogx-lora-i2v__degrad=0,1__downtemp=nearest__lr=1e-4__2024-10-25T14-52-57-0400/checkpoint-3200"
+CHECKPOINT_I2V5B_i2v_webvid_i13600_0degrad="outputs/models/cogx-lora-i2v__ZeroDegrad__resume=CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0__downtemp=blend_norm__lr=1e-4__2024-10-27T04-42-17-0400/checkpoint-13600/pytorch_lora_weights.safetensors"
+CHECKPOINT_I2V5B_i2v_webvid_i13400="outputs/models/cogx-lora-i2v_CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0,1__downtemp=blend_norm__lr=1e-4__2024-10-27T04-18-13-0400/checkpoint-13400/pytorch_lora_weights.safetensors"
 
 # Set the resume checkpoint based on a variable. Or, comment them all out to NOT resume from a checkpoint.
-RESUME_TITLE="CHECKPOINT_I2V5B_i2v_webvid_i3200" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
+RESUME_TITLE="CHECKPOINT_I2V5B_i2v_webvid_i13400" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
 
 
 # HANDWRITTEN_TITLE="ZeroDegrad"
