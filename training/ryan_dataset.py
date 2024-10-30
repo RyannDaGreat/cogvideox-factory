@@ -1,4 +1,5 @@
-print("KOYANA SCOTZY")
+import rp
+rp.fansi_print("KOYANA SCOTZY",'green yellow','dark blue')
 """
 
     ORIGINAL DATASET FORMAT:
@@ -85,7 +86,13 @@ def get_sample_helper(
         post_noise_alpha = post_noise_alpha, #Tells the dataset to choose a random number between 0 and 1
         
         delegator_timeout=None,
-        csv_path = '/fsx_scanline/from_eyeline/ning_video_genai/datasets/ryan/webvid/webvid_gpt4v_caption_2065605_clean.csv',
+
+        #FOR WEBVID TRAINING
+        # csv_path = '/fsx_scanline/from_eyeline/ning_video_genai/datasets/ryan/webvid/webvid_gpt4v_caption_2065605_clean.csv',
+
+        #FOR ENVATO TRAINING
+        csv_path="envato_caption_3869336_clean.csv",
+        video_folder="",
     )
     assert set(sample) <= set('text noise pixel_values'.split())
 
