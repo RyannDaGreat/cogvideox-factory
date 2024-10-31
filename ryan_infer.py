@@ -276,7 +276,7 @@ def run_pipe(
         video,
         resize_list(sample_gif, len(video)),
     )
-    preview_mp4_path=rp.save_video_mp4(prevideo, output_mp4_path+'_preview.mp4',framerate=16)
+    preview_mp4_path=rp.save_video_mp4(prevideo, output_mp4_path+'_preview.mp4',framerate=16,video_bitrate='max')
 
     return gather_vars('video output_mp4_path preview_mp4_path cartridge subfolder preview_mp4_path')
 
@@ -356,13 +356,26 @@ def main(
     cartridges = [load_sample_cartridge(**x) for x in cartridge_kwargs]
     pipe = get_pipe(pipe_name, lora_name, device)
 
+    output=[]
     for cartridge in cartridges:
-        run_pipe(
+        pipe_out = run_pipe(
             pipe=pipe,
             cartridge=cartridge,
             output_root=output_root,
             subfolder=subfolder,
         )
+
+        output.append(
+            rp.as_easydict(
+                rp.gather(
+                    pipe_out,
+                    ["output_mp4_path"],
+                    as_dict=True,
+                )
+            )
+        )
+
+    return output
 
 if __name__ == '__main__':
     import fire
@@ -474,3 +487,51 @@ if False:
     fansi_print(f"output_dir = {fansi_highlight_path(output_dir)}", "cyan", "bold")
 
     load_files(process_bundle, mp4_bundles, show_progress=True, num_threads=None)
+
+if False:
+    #Some code to sequentially go through a long video with I2V. Remember to first get all the cartridges!
+
+    import ryan_infer
+    import rp
+
+
+    sample_paths = [
+        "/root/CleanCode/Github/cogvideox-factory/datasets/factory_scene_snippets/speed=1__reversed=True/00.mp4.pkl",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/factory_scene_snippets/speed=1__reversed=True/01.mp4.pkl",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/factory_scene_snippets/speed=1__reversed=True/02.mp4.pkl",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/factory_scene_snippets/speed=1__reversed=True/03.mp4.pkl",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/factory_scene_snippets/speed=1__reversed=True/04.mp4.pkl",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/factory_scene_snippets/speed=1__reversed=True/05.mp4.pkl",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/factory_scene_snippets/speed=1__reversed=True/06.mp4.pkl",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/factory_scene_snippets/speed=1__reversed=True/07.mp4.pkl",
+    ]
+
+
+    title = "factory"
+    lora_name = "I2V5B_resum_blendnorm_i13400_webvid"
+    subfolder = f'ZSEQUENTIAL__{lora_name}__{title}__{format_current_date("EST")}'
+    initial_image = "/root/CleanCode/Github/cogvideox-factory/datasets/EVPG_Camera_Control_Style_001.jpg"
+
+    image = initial_image
+
+
+    for sample_path in sample_paths:
+        result = ryan_infer.main(
+            sample_path=sample_path,
+            image=image,
+            lora_name=lora_name,
+            subfolder=subfolder,
+            pipe_name="I2V5B",
+            noise_downtemp_interp="blend_norm",
+            degradation=0.5,
+            num_inference_steps=50,
+            # prompt='',
+        )
+
+        video_path = result[0].output_mp4_path
+
+        last_frame = rp.load_video(video_path)[-1]
+
+        image = save_image_jpg(last_frame, video_path + ".png")
+
+        fansi_print("SAVED IMAGE TO " + image, "yellow green", "bold italic", "dark red")
