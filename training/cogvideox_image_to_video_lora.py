@@ -38,7 +38,8 @@ from accelerate.utils import (
 from diffusers import (
     AutoencoderKLCogVideoX,
     CogVideoXDPMScheduler,
-    CogVideoXImageToVideoPipeline,
+    # CogVideoXImageToVideoPipeline,
+    # CogVideoXPipeline,
     CogVideoXTransformer3DModel,
 )
 from diffusers.models.autoencoders.vae import DiagonalGaussianDistribution
@@ -55,9 +56,19 @@ from transformers import AutoTokenizer, T5EncoderModel
 
 
 from args import get_args  # isort:skip
-from dataset import BucketSampler, VideoDatasetWithResizing, VideoDatasetWithResizeAndRectangleCrop  # isort:skip
+from dataset import (
+    # BucketSampler,
+    VideoDatasetWithResizing,
+    VideoDatasetWithResizeAndRectangleCrop,
+)  # isort:skip
 from text_encoder import compute_prompt_embeddings  # isort:skip
-from utils import get_gradient_norm, get_optimizer, prepare_rotary_positional_embeddings, print_memory, reset_memory  # isort:skip
+from utils import (
+    # get_gradient_norm,
+    get_optimizer,
+    prepare_rotary_positional_embeddings,
+    print_memory,
+    reset_memory,
+)  # isort:skip
 
 import rp
 import rp.r_iterm_comm as ric
@@ -85,49 +96,49 @@ def save_model_card(
             )
 
     model_description = f"""
-# CogVideoX LoRA Finetune
+    # CogVideoX LoRA Finetune
 
-<Gallery />
+    <Gallery />
 
-## Model description
+    ## Model description
 
-This is a lora finetune of the CogVideoX model `{base_model}`.
+    This is a lora finetune of the CogVideoX model `{base_model}`.
 
-The model was trained using [CogVideoX Factory](https://github.com/a-r-r-o-w/cogvideox-factory) - a repository containing memory-optimized training scripts for the CogVideoX family of models using [TorchAO](https://github.com/pytorch/ao) and [DeepSpeed](https://github.com/microsoft/DeepSpeed). The scripts were adopted from [CogVideoX Diffusers trainer](https://github.com/huggingface/diffusers/blob/main/examples/cogvideo/train_cogvideox_lora.py).
+    The model was trained using [CogVideoX Factory](https://github.com/a-r-r-o-w/cogvideox-factory) - a repository containing memory-optimized training scripts for the CogVideoX family of models using [TorchAO](https://github.com/pytorch/ao) and [DeepSpeed](https://github.com/microsoft/DeepSpeed). The scripts were adopted from [CogVideoX Diffusers trainer](https://github.com/huggingface/diffusers/blob/main/examples/cogvideo/train_cogvideox_lora.py).
 
-## Download model
+    ## Download model
 
-[Download LoRA]({repo_id}/tree/main) in the Files & Versions tab.
+    [Download LoRA]({repo_id}/tree/main) in the Files & Versions tab.
 
-## Usage
+    ## Usage
 
-Requires the [🧨 Diffusers library](https://github.com/huggingface/diffusers) installed.
+    Requires the [🧨 Diffusers library](https://github.com/huggingface/diffusers) installed.
 
-```py
-import torch
-from diffusers import CogVideoXImageToVideoPipeline
-from diffusers.utils import export_to_video, load_image
+    ```py
+    import torch
+    from diffusers import CogVideoXImageToVideoPipeline
+    from diffusers.utils import export_to_video, load_image
 
-pipe = CogVideoXImageToVideoPipeline.from_pretrained("THUDM/CogVideoX-5b-I2V", torch_dtype=torch.bfloat16).to("cuda")
-pipe.load_lora_weights("{repo_id}", weight_name="pytorch_lora_weights.safetensors", adapter_name="cogvideox-lora")
+    pipe = CogVideoXImageToVideoPipeline.from_pretrained("THUDM/CogVideoX-5b-I2V", torch_dtype=torch.bfloat16).to("cuda")
+    pipe.load_lora_weights("{repo_id}", weight_name="pytorch_lora_weights.safetensors", adapter_name="cogvideox-lora")
 
-# The LoRA adapter weights are determined by what was used for training.
-# In this case, we assume `--lora_alpha` is 32 and `--rank` is 64.
-# It can be made lower or higher from what was used in training to decrease or amplify the effect
-# of the LoRA upto a tolerance, beyond which one might notice no effect at all or overflows.
-pipe.set_adapters(["cogvideox-lora"], [32 / 64])
+    # The LoRA adapter weights are determined by what was used for training.
+    # In this case, we assume `--lora_alpha` is 32 and `--rank` is 64.
+    # It can be made lower or higher from what was used in training to decrease or amplify the effect
+    # of the LoRA upto a tolerance, beyond which one might notice no effect at all or overflows.
+    pipe.set_adapters(["cogvideox-lora"], [32 / 64])
 
-image = load_image("/path/to/image.png")
-video = pipe(image=image, prompt="{validation_prompt}", guidance_scale=6, use_dynamic_cfg=True).frames[0]
-export_to_video(video, "output.mp4", fps=8)
-```
+    image = load_image("/path/to/image.png")
+    video = pipe(image=image, prompt="{validation_prompt}", guidance_scale=6, use_dynamic_cfg=True).frames[0]
+    export_to_video(video, "output.mp4", fps=8)
+    ```
 
-For more details, including weighting, merging and fusing LoRAs, check the [documentation](https://huggingface.co/docs/diffusers/main/en/using-diffusers/loading_adapters) on loading LoRAs in diffusers.
+    For more details, including weighting, merging and fusing LoRAs, check the [documentation](https://huggingface.co/docs/diffusers/main/en/using-diffusers/loading_adapters) on loading LoRAs in diffusers.
 
-## License
+    ## License
 
-Please adhere to the licensing terms as described [here](https://huggingface.co/THUDM/CogVideoX-5b-I2V/blob/main/LICENSE).
-"""
+    Please adhere to the licensing terms as described [here](https://huggingface.co/THUDM/CogVideoX-5b-I2V/blob/main/LICENSE).
+    """
     model_card = load_or_create_model_card(
         repo_id_or_path=repo_id,
         from_training=True,
@@ -154,7 +165,7 @@ Please adhere to the licensing terms as described [here](https://huggingface.co/
 
 def log_validation(
     accelerator: Accelerator,
-    pipe: CogVideoXImageToVideoPipeline,
+    pipe,
     args: Dict[str, Any],
     pipeline_args: Dict[str, Any],
     epoch,
@@ -774,7 +785,12 @@ def main(args):
                 # Add noise to the model input according to the noise magnitude at each timestep
                 # (this is the forward diffusion process)
                 noisy_video_latents = scheduler.add_noise(video_latents, noise, timesteps)
-                noisy_model_input = torch.cat([noisy_video_latents, image_latents], dim=2)
+
+                if IS_I2V:
+                    noisy_model_input = torch.cat([noisy_video_latents, image_latents], dim=2)
+                else:
+                    assert IS_T2V
+                    noisy_model_input = noisy_video_latents
 
                 # Predict the noise residual
                 model_output = transformer(
@@ -801,9 +817,9 @@ def main(args):
                 accelerator.backward(loss)
 
                 if accelerator.sync_gradients:
-                    gradient_norm_before_clip = get_gradient_norm(transformer.parameters())
+                    # gradient_norm_before_clip = get_gradient_norm(transformer.parameters())
                     accelerator.clip_grad_norm_(transformer.parameters(), args.max_grad_norm)
-                    gradient_norm_after_clip = get_gradient_norm(transformer.parameters())
+                    # gradient_norm_after_clip = get_gradient_norm(transformer.parameters())
 
                 if accelerator.state.deepspeed_plugin is None:
                     optimizer.step()
@@ -886,7 +902,6 @@ def main(args):
                 validation_images = args.validation_images.split(args.validation_prompt_separator)
                 for validation_image, validation_prompt in zip(validation_images, validation_prompts):
                     pipeline_args = {
-                        "image": load_image(validation_image),
                         "prompt": validation_prompt,
                         "guidance_scale": args.guidance_scale,
                         "use_dynamic_cfg": args.use_dynamic_cfg,
@@ -894,6 +909,8 @@ def main(args):
                         "width": args.width,
                         "max_sequence_length": model_config.max_text_seq_length,
                     }
+                    if IS_I2V:
+                        pipeline_args.update({"image": load_image(validation_image)})
 
                     log_validation(
                         pipe=pipe,
@@ -973,13 +990,14 @@ def main(args):
             validation_images = args.validation_images.split(args.validation_prompt_separator)
             for validation_image, validation_prompt in zip(validation_images, validation_prompts):
                 pipeline_args = {
-                    "image": load_image(validation_image),
                     "prompt": validation_prompt,
                     "guidance_scale": args.guidance_scale,
                     "use_dynamic_cfg": args.use_dynamic_cfg,
                     "height": args.height,
                     "width": args.width,
                 }
+                if IS_I2V:
+                    pipeline_args.update({"image": load_image(validation_image)})
 
                 video = log_validation(
                     accelerator=accelerator,
@@ -1019,5 +1037,15 @@ if __name__ == "__main__":
     args = get_args()
 
     ric.process_args.update(args.__dict__) #Is updated in the ...lora.py script
+
+    IS_I2V='I2V' in ric.process_args['ryan_model_name'].upper()
+    IS_T2V=not IS_I2V
+
+    if IS_T2V:
+        for _ in range(10):rp.fansi_print("IS_T2V Text To Video = "+str(IS_T2V),'green yellow','bold italic underlined','dark red')
+        from diffusers import CogVideoXPipeline as CogVideoXImageToVideoPipeline
+    else:
+        for _ in range(10):rp.fansi_print("IS_I2V Image To Video = "+str(IS_I2V),'green yellow','bold italic underlined','dark red')
+        from diffusers import CogVideoXImageToVideoPipeline
 
     main(args)

@@ -460,6 +460,7 @@ def _get_ryan_data_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--ryan_data_post_noise_alpha"     , type=str, default=None)
     parser.add_argument("--ryan_data_delegator_address"    , type=str, default=None)
     parser.add_argument("--ryan_data_noise_downtemp_interp", type=str, default=None)
+    parser.add_argument("--ryan_model_name", type=str, default=None)
     
 def get_args():
     parser = argparse.ArgumentParser(description="Simple example of a training script for CogVideoX.")
