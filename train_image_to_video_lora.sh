@@ -49,13 +49,14 @@ DATESTRING=$(date +"%Y-%m-%dT%H-%M-%S%z")
 #All trained checkpoints we care about so far...NOTE SHOULD NOT BE A SAFETENSORS FILE should be its parent folder
 CHECKPOINT_I2V5B_i2v_webvid_i13600_0degrad="outputs/models/cogx-lora-i2v__ZeroDegrad__resume=CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0__downtemp=blend_norm__lr=1e-4__2024-10-27T04-42-17-0400/checkpoint-13600"
 CHECKPOINT_I2V5B_i2v_webvid_i13400="outputs/models/cogx-lora-i2v_CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0,1__downtemp=blend_norm__lr=1e-4__2024-10-27T04-18-13-0400/checkpoint-13400"
-
+CHECKPOINT_I2V5B_resum_blendnorm_i26600="outputs/models/cogx-lora-i2v__EnvatoFromWebvid__resume=CHECKPOINT_I2V5B_i2v_webvid_i13400__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={2048}__2024-10-30T10-58-22-0400/checkpoint-26600"
 # Set the resume checkpoint based on a variable. Or, comment them all out to NOT resume from a checkpoint.
-RESUME_TITLE="CHECKPOINT_I2V5B_i2v_webvid_i13400" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
+# RESUME_TITLE="CHECKPOINT_I2V5B_i2v_webvid_i13400" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
+RESUME_TITLE="CHECKPOINT_I2V5B_resum_blendnorm_i26600" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
 
 
 # HANDWRITTEN_TITLE="ZeroDegrad"
-HANDWRITTEN_TITLE="EnvatoFromWebvid"
+HANDWRITTEN_TITLE="EnvatoFromWebvidContinued"
 
 #Notes:
 # don't worry about id_token our dataset overrides the prompt generation it doesn't matter
