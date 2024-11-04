@@ -105,11 +105,11 @@ for learning_rate in "${LEARNING_RATES[@]}"; do
         #Kill the syncing process when we exit
         trap "echo 'Killing sync process with PID $syncing_pid'; kill $syncing_pid" EXIT
 
-				# $( if [[ -n $RESUME_FROM_CHECKPOINT ]]; then echo "--resume_from_checkpoint $RESUME_FROM_CHECKPOINT"; fi ) \
-				# --resume_from_checkpoint $RESUME_FROM_CHECKPOINT \
+        # $( if [[ -n $RESUME_FROM_CHECKPOINT ]]; then echo "--resume_from_checkpoint $RESUME_FROM_CHECKPOINT"; fi ) \
+        # --resume_from_checkpoint $RESUME_FROM_CHECKPOINT \
         cmd="accelerate launch --config_file $ACCELERATE_CONFIG_FILE --gpu_ids $GPU_IDS training/cogvideox_image_to_video_lora.py \
-				$( if [[ -n $RESUME_FROM_CHECKPOINT ]]; then echo "--resume_from_checkpoint $RESUME_FROM_CHECKPOINT"; fi ) \
-					--pretrained_model_name_or_path $BASE_MODEL_NAME \
+        $( if [[ -n $RESUME_FROM_CHECKPOINT ]]; then echo "--resume_from_checkpoint $RESUME_FROM_CHECKPOINT"; fi ) \
+          --pretrained_model_name_or_path $BASE_MODEL_NAME \
           --data_root $DATA_ROOT \
           --caption_column $CAPTION_COLUMN \
           --video_column $VIDEO_COLUMN \
