@@ -49,7 +49,7 @@ DATESTRING=$(date +"%Y-%m-%dT%H-%M-%S%z")
 #All trained checkpoints we care about so far...NOTE SHOULD NOT BE A SAFETENSORS FILE should be its parent folder
 CHECKPOINT_I2V5B_i2v_webvid_i13600_0degrad="outputs/models/cogx-lora-i2v__ZeroDegrad__resume=CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0__downtemp=blend_norm__lr=1e-4__2024-10-27T04-42-17-0400/checkpoint-13600"
 CHECKPOINT_I2V5B_i2v_webvid_i13400="outputs/models/cogx-lora-i2v_CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0,1__downtemp=blend_norm__lr=1e-4__2024-10-27T04-18-13-0400/checkpoint-13400"
-CHECKPOINT_I2V5B_resum_blendnorm_i26600="outputs/models/cogx-lora-i2v__EnvatoFromWebvid__resume=CHECKPOINT_I2V5B_i2v_webvid_i13400__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-10-30T10-58-22-0400/checkpoint-26600"
+CHECKPOINT_I2V5B_resum_blendnorm_i26600="outputs/models/cogx-lora-i2v__EnvatoFromWebvid__resume=CHECKPOINT_I2V5B_i2v_webvid_i13400__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={2048}__2024-10-30T10-58-22-0400/checkpoint-26600"
 # Set the resume checkpoint based on a variable. Or, comment them all out to NOT resume from a checkpoint.
 # RESUME_TITLE="CHECKPOINT_I2V5B_i2v_webvid_i13400" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
 # RESUME_TITLE="CHECKPOINT_I2V5B_resum_blendnorm_i26600" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
@@ -64,6 +64,22 @@ BASE_MODEL_NAME='THUDM/CogVideoX-5b' ; MODEL_TYPE='T2V-Text-To-Video'
 
 #Notes:
 # don't worry about id_token our dataset overrides the prompt generation it doesn't matter
+
+#<<<CARTRIDGES START>>>
+
+  #IMAGE TO VIDEO
+  RANK=2048 ; LORA_ALPHA=$RANK #Default: 128 
+  RESUME_TITLE="CHECKPOINT_I2V5B_resum_blendnorm_i26600" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
+  BASE_MODEL_NAME='THUDM/CogVideoX-5b-I2V' ; MODEL_TYPE='I2V-Image-To-Video'
+  HANDWRITTEN_TITLE="EnvatoFromWebvidContinued"
+
+  # #TEXT TO VIDEO
+  # RANK=3072 ; LORA_ALPHA=$RANK #Default: 128 
+  # BASE_MODEL_NAME='THUDM/CogVideoX-5b' ; MODEL_TYPE='T2V-Text-To-Video'
+  #   #RESUME_TITLE=
+  # HANDWRITTEN_TITLE="TextToVideoFromEnvatoFromScratch"
+
+#<<<CARTRIDGES END>>>
 
 # Launch experiments with different hyperparameters
 for learning_rate in "${LEARNING_RATES[@]}"; do
@@ -92,6 +108,7 @@ for learning_rate in "${LEARNING_RATES[@]}"; do
 				# $( if [[ -n $RESUME_FROM_CHECKPOINT ]]; then echo "--resume_from_checkpoint $RESUME_FROM_CHECKPOINT"; fi ) \
 				# --resume_from_checkpoint $RESUME_FROM_CHECKPOINT \
         cmd="accelerate launch --config_file $ACCELERATE_CONFIG_FILE --gpu_ids $GPU_IDS training/cogvideox_image_to_video_lora.py \
+				$( if [[ -n $RESUME_FROM_CHECKPOINT ]]; then echo "--resume_from_checkpoint $RESUME_FROM_CHECKPOINT"; fi ) \
 					--pretrained_model_name_or_path $BASE_MODEL_NAME \
           --data_root $DATA_ROOT \
           --caption_column $CAPTION_COLUMN \
