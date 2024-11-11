@@ -1,6 +1,7 @@
 from rp import *
 import torch
 from diffusers import CogVideoXImageToVideoPipeline
+from diffusers import CogVideoXVideoToVideoPipeline
 from diffusers import CogVideoXPipeline
 from diffusers.utils import export_to_video, load_image
 from icecream import ic
@@ -12,7 +13,7 @@ pipe_ids = dict(
     T2V2B="THUDM/CogVideoX-2b",
     I2V5B="THUDM/CogVideoX-5b-I2V",
 )
-
+# From a bird's-eye view, a serene scene unfolds: a herd of deer gracefully navigates shallow, warm-hued waters, their silhouettes stark against the earthy tones. The deer, spread across the frame, cast elongated, well-defined shadows that accentuate their antlers, creating a mesmerizing play of light and dark. This aerial perspective captures the tranquil essence of the setting, emphasizing the harmonious contrast between the deer and their mirror-like reflections on the water's surface. The composition exudes a peaceful stillness, yet the subtle movement suggested by the shadows adds a dynamic layer to the natural beauty and symmetry of the moment.
 lora_paths = dict(
     T2V5B_RDeg_i9800         = '/root/CleanCode/Github/CogVideo/finetune/cogvideox5b-lora-single-node-delegator-noisewarp-Oct16-RandomDegradation-LargerBatchSize-SmallLearnRate/checkpoint-9800/saved_weights_copy/pytorch_lora_weights.safetensors',
     T2V5B_0Deg_L512_ND_i1200 = '/root/CleanCode/Github/CogVideo/finetune/cogvideox5b-lora-single-node-delegator-noisewarp-Oct16-RandomDegradation-LargerBatchSize-SmallLearnRate-LORA512-0Degrad/checkpoint-1200/saved_weights_copy/pytorch_lora_weights.safetensors',
@@ -31,6 +32,23 @@ lora_paths = dict(
     I2V5B_resum_blendnorm_i13400_webvid         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v_CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0,1__downtemp=blend_norm__lr=1e-4__2024-10-27T04-18-13-0400/checkpoint-13400/pytorch_lora_weights.safetensors",
     I2V5B_resum_blendnorm_i22600_webvid         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__EnvatoFromWebvid__resume=CHECKPOINT_I2V5B_i2v_webvid_i13400__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={2048}__2024-10-30T10-58-22-0400/checkpoint-22600/pytorch_lora_weights.safetensors",
     I2V5B_resum_blendnorm_i26600_webvid         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__EnvatoFromWebvid__resume=CHECKPOINT_I2V5B_i2v_webvid_i13400__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={2048}__2024-10-30T10-58-22-0400/checkpoint-26600/pytorch_lora_weights.safetensors",
+    I2V5B_resum_blendnorm_i30000_webvid         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__EnvatoFromWebvid__resume=CHECKPOINT_I2V5B_i2v_webvid_i13400__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={2048}__2024-10-30T10-58-22-0400/checkpoint-29800/pytorch_lora_weights.safetensors",
+    I2V5B_final_i30000                          = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-EnvatoFromWebvidContinued__resume=CHECKPOINT_I2V5B_resum_blendnorm_i26600__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={2048}__2024-11-03T21-11-57-0500/checkpoint-29800/pytorch_lora_weights.safetensors",
+
+    T2V5B_blendnorm_i1800_envato         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-1800/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i2000_envato         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-2000/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i2800_envato         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-2800/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i6800_envato         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-6800/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i7400_envato         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-7400/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i9600_envato         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-9600/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i11600_envato        = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-11600/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i16400_envato        = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-16400/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i16800_envato        = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-16800/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i18000_envato        = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-18000/pytorch_lora_weights.safetensors",
+    
+    T2V5B_blendnorm_i11000_envato_nearest= "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvato__ResumeWithNearest____resume=CHECKPOINT_T2V5B_blendnorm_i9400_envato__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-05T16-00-32-0500/checkpoint-11000/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i16400_envato_nearest= "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvato__ResumeWithNearest____resume=CHECKPOINT_T2V5B_blendnorm_i9400_envato__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-05T16-00-32-0500/checkpoint-16400/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i18000_envato_nearest= "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvato__ResumeWithNearest____resume=CHECKPOINT_T2V5B_blendnorm_i11200_envato__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-06T01-17-49-0500/checkpoint-18000/pytorch_lora_weights.safetensors",
 )
 #To get the trained LoRA paths:
 #     >>> lora_paths =glob.glob('/root/CleanCode/Github/CogVideo/finetune/*/*/saved_weights_copy/pytorch_lora_weights.safetensors') #For Old Training Codebase (T2V)
@@ -61,20 +79,30 @@ def get_pipe(pipe_name=None, lora_name=None, device=None):
         fansi_print(f"Getting pipe name from lora_name={lora_name}",'cyan','bold')
         pipe_name = lora_name.split('_')[0]
 
-    pipe_id = pipe_ids[pipe_name]
-
-    print(f"LOADING PIPE WITH device={device} pipe_id={pipe_id} lora_name={lora_name}")
-
     is_i2v = "I2V" in pipe_name  # This is a convention I'm using right now
+    is_v2v = "V2V" in pipe_name  # This is a convention I'm using right now
+
+    if is_v2v:
+        old_pipe_name = pipe_name
+        old_lora_name = lora_name
+        if pipe_name is not None: pipe_name = pipe_name.replace('V2V','T2V')
+        if lora_name is not None: lora_name = lora_name.replace('V2V','T2V')
+        rp.fansi_print(f"V2V: {old_pipe_name} --> {pipe_name}   &&&   {old_lora_name} --> {lora_name}",'white','bold italic','red')
+    
+    pipe_id = pipe_ids[pipe_name]
+    print(f"LOADING PIPE WITH device={device} pipe_name={pipe_name} pipe_id={pipe_id} lora_name={lora_name}")
     
     PipeClass = CogVideoXImageToVideoPipeline if is_i2v else CogVideoXPipeline
+    if is_v2v:
+        PipeClass = CogVideoXVideoToVideoPipeline
+
     pipe = PipeClass.from_pretrained(pipe_ids[pipe_name], torch_dtype=torch.bfloat16)
 
     pipe.pipe_name = pipe_name
 
     if lora_name is not None:
         lora_path = lora_paths[lora_name]
-        assert file_exists(lora_path)
+        assert file_exists(lora_path), (lora_name, lora_path)
         print(end="\tLOADING LORA WEIGHTS...",flush=True)
         pipe.load_lora_weights(rp.download_file_to_cache(lora_path))
         print("DONE!")
@@ -94,6 +122,7 @@ def get_pipe(pipe_name=None, lora_name=None, device=None):
     pipe.lora_name = lora_name
     pipe.pipe_name = pipe_name
     pipe.is_i2v    = is_i2v
+    pipe.is_v2v    = is_v2v
     
     return pipe
 
@@ -107,6 +136,7 @@ def load_sample_cartridge(
     #SETTINGS:
     num_inference_steps=30,
     guidance_scale=6,
+    v2v_strength=.5,
 ):
     """
     COMPLETELY FROM SAMPLE: Generate with /root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidSampleGenerator.ipynb
@@ -142,7 +172,9 @@ def load_sample_cartridge(
     sample_video  = sample.instance_video.to(dtype)
     sample_prompt = sample.instance_prompt
 
-    sample_gif_path = sample_path+'.gif'
+    sample_gif_path = sample_path+'.mp4'
+    if not rp.file_exists(sample_gif_path):
+        sample_gif_path = sample_path+'.gif' #The older scripts made this. Backwards compatibility.
 
     #prompt=sample.instance_prompt
     downtemp_noise = ryan_dataset.downtemp_noise(
@@ -159,7 +191,7 @@ def load_sample_cartridge(
     else                        : sample_image = rp.as_pil_image(rp.as_rgb_image(image))
 
     metadata = gather_vars('sample_path degradation downtemp_noise sample_gif_path sample_video sample_noise noise_downtemp_interp')
-    settings = gather_vars('num_inference_steps guidance_scale')
+    settings = gather_vars('num_inference_steps guidance_scale v2v_strength')
 
     if noise  is None: noise  = downtemp_noise
     if video  is None: video  = sample_video
@@ -224,9 +256,10 @@ def get_output_path(pipe, cartridge, subfolder:str, output_root:str):
             pipe=pipe.pipe_name,
             lora=pipe.lora_name,
             steps    =               cartridge.settings.num_inference_steps,
+            strength =               cartridge.settings.v2v_strength,
             degrad   =               cartridge.metadata.degradation,
             downtemp =               cartridge.metadata.noise_downtemp_interp,
-            samp     = get_file_name(cartridge.metadata.sample_path, False),
+            samp     = get_file_name(get_parent_folder(cartridge.metadata.sample_path), False),
         )
         + ".mp4"
     )
@@ -257,9 +290,17 @@ def run_pipe(
         if isinstance(image, str):
             image = rp.as_pil_image(rp.load_image(image, use_cache=True))
 
+    if pipe.is_v2v:
+        print("Making v2v video...")
+        v2v_video=cartridge.video
+        v2v_video=rp.as_numpy_images(v2v_video) / 2 + .5
+        v2v_video=rp.as_pil_images(v2v_video)
+
     video = pipe(
         prompt=cartridge.prompt,
-        **(dict(image=image) if pipe.is_i2v else {}),
+        **(dict(image   =image                          ) if pipe.is_i2v else {}),
+        **(dict(strength=cartridge.settings.v2v_strength) if pipe.is_v2v else {}),
+        **(dict(video   =v2v_video                      ) if pipe.is_v2v else {}),
         num_inference_steps=cartridge.settings.num_inference_steps,
         latents=cartridge.noise.to(pipe.device),
 
@@ -275,12 +316,31 @@ def run_pipe(
     sample_gif=load_video(cartridge.metadata.sample_gif_path)
     video=as_numpy_images(video)
     prevideo = horizontally_concatenated_videos(
-        video,
         resize_list(sample_gif, len(video)),
+        video,
+        origin='bottom right',
     )
-    preview_mp4_path=rp.save_video_mp4(prevideo, output_mp4_path+'_preview.mp4',framerate=16,video_bitrate='max')
+    import textwrap
+    prevideo = rp.labeled_images(
+        prevideo,
+        position="top",
+        labels=cartridge.metadata.sample_path +"\n"+output_mp4_path +"\n\n" + rp.wrap_string_to_width(cartridge.prompt, 250),
+        size_by_lines=True,
+        text_color='light light light blue',
+        # font='G:Lexend'
+    )
 
-    return gather_vars('video output_mp4_path preview_mp4_path cartridge subfolder preview_mp4_path')
+    preview_mp4_path = output_mp4_path + "_preview.mp4"
+    preview_gif_path = preview_mp4_path + ".gif"
+    print(end=f"Saving preview MP4 to preview_mp4_path = {preview_mp4_path}...")
+    rp.save_video_mp4(prevideo, preview_mp4_path, framerate=16, video_bitrate="max", show_progress=False)
+    compressed_preview_mp4_path = rp.save_video_mp4(prevideo, output_mp4_path + "_preview_compressed.mp4", framerate=16, show_progress=False)
+    print("done!")
+    print(end=f"Saving preview gif to preview_gif_path = {preview_gif_path}...")
+    rp.convert_to_gif_via_ffmpeg(preview_mp4_path, preview_gif_path, framerate=12,show_progress=False)
+    print("done!")
+
+    return gather_vars('video output_mp4_path preview_mp4_path compressed_preview_mp4_path cartridge subfolder preview_mp4_path preview_gif_path')
 
 
 # #prompt = "A little girl is riding a bicycle at high speed. Focused, detailed, realistic."
@@ -307,6 +367,7 @@ def main(
     prompt=None,
     num_inference_steps=30,
     guidance_scale=6,
+    v2v_strength=.5,#Timestep for when using Vid2Vid. Only set to not none when using a T2V model!
 ):
     """
     Main function to run the video generation pipeline with specified parameters.
@@ -339,9 +400,9 @@ def main(
             "prompt",
             "num_inference_steps",
             "guidance_scale",
+            "v2v_strength",
         )
     )
-
     rp.fansi_print("cartridge_kwargs:", "cyan", "bold")
     print(
         rp.indentify(
@@ -355,7 +416,8 @@ def main(
         ),
     )
 
-    cartridges = [load_sample_cartridge(**x) for x in cartridge_kwargs]
+    # cartridges = [load_sample_cartridge(**x) for x in cartridge_kwargs]
+    cartridges = rp.load_files(lambda x:load_sample_cartridge(**x), cartridge_kwargs, show_progress='eta:Loading Cartridges')
     pipe = get_pipe(pipe_name, lora_name, device)
 
     output=[]
@@ -371,7 +433,13 @@ def main(
             rp.as_easydict(
                 rp.gather(
                     pipe_out,
-                    ["output_mp4_path"],
+[
+'output_mp4_path',
+'preview_mp4_path',
+'compressed_preview_mp4_path',
+'preview_mp4_path',
+'preview_gif_path',
+],
                     as_dict=True,
                 )
             )
@@ -427,9 +495,11 @@ if False:
             "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/clink_grief.pkl",
             "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/droop_fever.pkl",
             "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/elude_barge.pkl",
+            
         ],
         # lora_name="I2V5B_i2v_webvid_i3200",
-        lora_name=None,
+        lora_name="T2V5B_blendnorm_i16800_envato",
+        # lora_name=None,
         degradation=1,
         noise_downtemp_interp="blend_norm",
         subfolder="abusing_nolora_blendnorm",
@@ -747,4 +817,253 @@ if False:
         num_inference_steps=50,
         noise_downtemp_interp="blend_norm",
         subfolder="BATTERY_TEST/VPS_SAMPLES_CUSTOMPROMPT/I2V5B_resum_blendnorm_i22600_webvid",
+    )
+
+if False:
+    #DL3DV Testing
+
+    r._pterm_cd("/root/CleanCode/Github/cogvideox-factory")
+
+    import ryan_infer
+
+    # lora_name = 'T2V2B_RDeg_i30000'
+    lora_name = "I2V5B_final_i30000"
+    lora_name = 'T2V5B_blendnorm_i16800_envato'
+    # lora_name = 'T2V5B_blendnorm_i16800_envato'
+
+    infer_degrad = 0.5
+    steps = 50
+    # steps = 30
+    interp = "blend_norm"
+
+    settings = f"degrad={infer_degrad}_steps={steps}_interp={interp}"
+    subfolder = f"CLEAN_OUTPUTS/WILDCARD_TESTS/BATTERIES/{lora_name}/{settings}"
+
+    sample_path = [
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/twine_duke.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/repel_chump.pkl",
+                    "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/ahead_job.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/agile_lent.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/agile_wing.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/ajar_payer.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/alive_smog.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/amuse_chop.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/argue_life.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/bless_life.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/blog_voice.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/blunt_clay.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/blunt_swab.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/busy_proof.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/carve_stem.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/chomp_shop.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/clump_grub.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/agile_train.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/ahead_shred.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/alien_wagon.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/arise_clear.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/balmy_fetch.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/balmy_rerun.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/balmy_smash.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/bleak_skier.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/bless_banjo.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples/brisk_stump.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/ajar_doll.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/brisk_rug.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/ajar_clasp.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/bless_scan.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/both_cramp.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/clap_patch.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/amend_shred.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/clink_grief.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/droop_fever.pkl",
+            "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_Train_Samples_BlendNoise_Norm_30FPS/elude_barge.pkl",
+                    "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/twine_duke.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/agile_five.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/neat_raven.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/wiry_quota.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/snort_denim.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/brisk_carry.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/wipe_doll.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/ahead_vegan.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/thud_wagon.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/lend_aloe.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/blog_ride.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/rich_card.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/thud_pond.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/arise_gift.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/cozy_disk.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/savor_dot.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/polar_reset.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/shout_train.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/elude_jelly.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/relax_crepe.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/dusk_blade.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/enter_void.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/crisp_state.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/cozy_stir.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/clap_chip.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/yelp_elm.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/heap_grave.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/ahead_shell.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/sleek_puppy.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/harm_flip.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/dice_olive.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/plead_video.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/ritzy_plank.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/zoom_grill.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/arise_cache.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/fray_tart.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/speak_deaf.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/repel_think.pkl",
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/repel_chump.pkl",
+    ]
+
+    sample_path = shuffled(sample_path)
+
+    prompt = None
+
+    ryan_infer.main(
+        sample_path=sample_path,
+        lora_name=lora_name,
+        degradation=infer_degrad,
+        prompt=prompt,
+        num_inference_steps=steps,
+        noise_downtemp_interp=interp,
+        subfolder=subfolder,
+    )
+
+
+if False:
+    #PROMPT BATTERIES
+
+    r._pterm_cd("/root/CleanCode/Github/cogvideox-factory")
+
+    import ryan_infer
+
+    # lora_name = 'T2V2B_RDeg_i30000'
+    lora_name = "I2V5B_final_i30000"
+    #lora_name = 'T2V5B_blendnorm_i11600_envato'
+
+    infer_degrad = 0.5
+    steps = 50
+    #steps = 30
+    interp = "blend_norm"
+    #interp = "nearest"
+
+    settings = f"degrad={infer_degrad}_steps={steps}_interp={interp}"
+    subfolder = f"CLEAN_OUTPUTS/DL3DV_TESTS/IMAGE_BATTERIES/{lora_name}/{settings}"
+
+    sample_path = [
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/enter_void.pkl",
+    ]
+
+    sample_path = shuffled(sample_path)
+
+    image = [
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.44.43 AM.jpg",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.41.54 AM.jpg",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.41.33 AM.jpg",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.40.20 AM.jpg",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.40.09 AM.jpg",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.39.22 AM.jpg",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.39.11 AM.jpg",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.38.55 AM.jpg",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.38.29 AM.jpg",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.36.13 AM.jpg",
+    ]
+
+
+    prompt = [
+        """A young woman, dressed in denim and holding a coffee mug, is seated cross-legged on a chair placed on a covered table in front of a "Gameday Spirit Fanstore" sign, set against a brick wall. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """Three strawberry-topped cheesecakes are displayed on a covered table in front of the "Gameday Spirit Fanstore" sign, against a backdrop of a brick wall. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """A single strawberry-topped cheesecake sits on the covered table, prominently in front of the "Gameday Spirit Fanstore" sign and brick wall. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """A fluffy, young Maine Coon kitten with striking markings and bright blue eyes is seated on the covered table in front of the fan store sign and brick wall. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """A Pomeranian dog and a Maine Coon kitten are sitting side by side on the covered table, with the "Gameday Spirit Fanstore" sign and brick wall in the background. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """A fluffy Pomeranian dog is sitting alone on the covered table, in front of the fan store sign and the brick wall. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """The Pomeranian dog is positioned centrally on the table, with its fluffy fur making it appear cute and content in front of the fan store sign. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """A French Bulldog puppy with a curious expression sits on the covered table, positioned in front of the "Gameday Spirit Fanstore" sign. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """The French Bulldog puppy sits on the table, looking directly at the camera, with the "Gameday Spirit Fanstore" sign visible in the background. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """The covered table stands alone in front of the "Gameday Spirit Fanstore" sign against a brick wall, with no objects or animals on it. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+    ]
+
+    prompt, image = sync_shuffled(prompt, image)
+    prompt=list(prompt)
+    image=list(image)
+
+    ryan_infer.main(
+        sample_path=sample_path,
+        lora_name=lora_name,
+        degradation=infer_degrad,
+        prompt=prompt,
+        num_inference_steps=steps,
+        noise_downtemp_interp=interp,
+        subfolder=subfolder,
+        image=image,
+    )
+
+if False:
+    #OBJECT INSERTION
+    r._pterm_cd("/root/CleanCode/Github/cogvideox-factory")
+
+    import ryan_infer
+
+    # lora_name = 'T2V2B_RDeg_i30000'
+    lora_name = "I2V5B_final_i30000"
+    #lora_name = 'T2V5B_blendnorm_i11600_envato'
+
+    infer_degrad = 0.5
+    steps = 50
+    #steps = 30
+    interp = "blend_norm"
+    #interp = "nearest"
+
+    settings = f"degrad={infer_degrad}_steps={steps}_interp={interp}"
+    subfolder = f"CLEAN_OUTPUTS/DL3DV_TESTS/IMAGE_BATTERIES/{lora_name}/{settings}"
+
+    sample_path = [
+        "/root/micromamba/envs/i2sb/lib/python3.8/site-packages/rp/git/CommonSource/notebooks/CogVidX_Saved_DL3DV_Samples/enter_void.pkl",
+    ]
+
+    sample_path = shuffled(sample_path)
+
+    image = [
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.44.43 AM.png",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.41.54 AM.png",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.41.33 AM.png",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.40.20 AM.png",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.40.09 AM.png",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.39.22 AM.png",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.39.11 AM.png",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.38.55 AM.png",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.38.29 AM.png",
+        "/root/CleanCode/Github/cogvideox-factory/datasets/new_first_frames/enter_void/Screenshot 2024-11-06 at 4.36.13 AM.png",
+    ]
+
+
+    prompt = [
+        """A young woman, dressed in denim and holding a coffee mug, is seated cross-legged on a chair placed on a covered table in front of a "Gameday Spirit Fanstore" sign, set against a brick wall. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """Three strawberry-topped cheesecakes are displayed on a covered table in front of the "Gameday Spirit Fanstore" sign, against a backdrop of a brick wall. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """A single strawberry-topped cheesecake sits on the covered table, prominently in front of the "Gameday Spirit Fanstore" sign and brick wall. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """A fluffy, young Maine Coon kitten with striking markings and bright blue eyes is seated on the covered table in front of the fan store sign and brick wall. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """A Pomeranian dog and a Maine Coon kitten are sitting side by side on the covered table, with the "Gameday Spirit Fanstore" sign and brick wall in the background. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """A fluffy Pomeranian dog is sitting alone on the covered table, in front of the fan store sign and the brick wall. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """The Pomeranian dog is positioned centrally on the table, with its fluffy fur making it appear cute and content in front of the fan store sign. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """A French Bulldog puppy with a curious expression sits on the covered table, positioned in front of the "Gameday Spirit Fanstore" sign. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """The French Bulldog puppy sits on the table, looking directly at the camera, with the "Gameday Spirit Fanstore" sign visible in the background. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+        """The covered table stands alone in front of the "Gameday Spirit Fanstore" sign against a brick wall, with no objects or animals on it. The video shows a series of scenes in a sports arena, starting with a reflective black cabinet and a gray cloth-covered table, with a person's reflection visible. The scene transitions to a quiet, empty space with a 'Fighting Illini' sign, a draped table, and a brown suitcase. Next, a 'GAMER DAY' sign is seen above a cabinet with a gray cloth, with a suitcase and a black bag nearby. A large blue cabinet with a 'FAN TILIN' sign appears in a sports facility, followed by a similar cabinet with a 'GAMEDAY' sign, a brown suitcase, and a black bag. Finally, a 'GAMER DAY' banner is displayed above a cabinet with a gray cloth, with a suitcase and a black bag on the floor.""",
+    ]
+
+    prompt, image = sync_shuffled(prompt, image)
+    prompt=list(prompt)
+    image=list(image)
+
+    ryan_infer.main(
+        sample_path=sample_path,
+        lora_name=lora_name,
+        degradation=infer_degrad,
+        prompt=prompt,
+        num_inference_steps=steps,
+        noise_downtemp_interp=interp,
+        subfolder=subfolder,
+        image=image,
     )

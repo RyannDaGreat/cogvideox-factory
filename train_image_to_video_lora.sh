@@ -50,6 +50,11 @@ DATESTRING=$(date +"%Y-%m-%dT%H-%M-%S%z")
 CHECKPOINT_I2V5B_i2v_webvid_i13600_0degrad="outputs/models/cogx-lora-i2v__ZeroDegrad__resume=CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0__downtemp=blend_norm__lr=1e-4__2024-10-27T04-42-17-0400/checkpoint-13600"
 CHECKPOINT_I2V5B_i2v_webvid_i13400="outputs/models/cogx-lora-i2v_CHECKPOINT_I2V5B_i2v_webvid_i3200__degrad=0,1__downtemp=blend_norm__lr=1e-4__2024-10-27T04-18-13-0400/checkpoint-13400"
 CHECKPOINT_I2V5B_resum_blendnorm_i26600="outputs/models/cogx-lora-i2v__EnvatoFromWebvid__resume=CHECKPOINT_I2V5B_i2v_webvid_i13400__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={2048}__2024-10-30T10-58-22-0400/checkpoint-26600"
+CHECKPOINT_T2V5B_blendnorm_i7400_envato="/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-7400"
+CHECKPOINT_T2V5B_blendnorm_i9400_envato="/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-9400"
+CHECKPOINT_T2V5B_blendnorm_i11200_envato="/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-11200"
+CHECKPOINT_T2V5B_blendnorm_i18000_envato_nearest="/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvato__ResumeWithNearest____resume=CHECKPOINT_T2V5B_blendnorm_i11200_envato__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-06T01-17-49-0500/checkpoint-18000"
+CHECKPOINT_I2V5B_resum_i30000_nearest="/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-EnvatoFromWebvidContinued__resume=CHECKPOINT_I2V5B_resum_blendnorm_i26600__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={2048}__2024-11-03T21-11-57-0500/checkpoint-29800",
 # Set the resume checkpoint based on a variable. Or, comment them all out to NOT resume from a checkpoint.
 # RESUME_TITLE="CHECKPOINT_I2V5B_i2v_webvid_i13400" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
 # RESUME_TITLE="CHECKPOINT_I2V5B_resum_blendnorm_i26600" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
@@ -67,17 +72,33 @@ BASE_MODEL_NAME='THUDM/CogVideoX-5b' ; MODEL_TYPE='T2V-Text-To-Video'
 
 #<<<CARTRIDGES START>>>
 
-  #IMAGE TO VIDEO
-  RANK=2048 ; LORA_ALPHA=$RANK #Default: 128 
-  RESUME_TITLE="CHECKPOINT_I2V5B_resum_blendnorm_i26600" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
-  BASE_MODEL_NAME='THUDM/CogVideoX-5b-I2V' ; MODEL_TYPE='I2V-Image-To-Video'
-  HANDWRITTEN_TITLE="EnvatoFromWebvidContinued"
+  # #IMAGE TO VIDEO
+  # RANK=2048 ; LORA_ALPHA=$RANK #Default: 128 
+  # RESUME_TITLE="CHECKPOINT_I2V5B_resum_blendnorm_i26600" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
+  # BASE_MODEL_NAME='THUDM/CogVideoX-5b-I2V' ; MODEL_TYPE='I2V-Image-To-Video'
+  # HANDWRITTEN_TITLE="OVERTIME__EnvatoFromWebvidContinued__OVERTIME"
+  # MAX_TRAIN_STEPS=("60000")
 
   # #TEXT TO VIDEO
   # RANK=3072 ; LORA_ALPHA=$RANK #Default: 128 
   # BASE_MODEL_NAME='THUDM/CogVideoX-5b' ; MODEL_TYPE='T2V-Text-To-Video'
   #   #RESUME_TITLE=
   # HANDWRITTEN_TITLE="TextToVideoFromEnvatoFromScratch"
+
+  # #TEXT TO VIDEO NEAREST
+  # RANK=3072 ; LORA_ALPHA=$RANK #Default: 128 
+  # BASE_MODEL_NAME='THUDM/CogVideoX-5b' ; MODEL_TYPE='T2V-Text-To-Video'
+  # RESUME_TITLE="CHECKPOINT_T2V5B_blendnorm_i18000_envato_nearest" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
+  # ryan_data_noise_downtemp_interp='nearest' #nearest, blend, blend_norm
+  # HANDWRITTEN_TITLE="TextToVideoFromEnvato__ResumeWithNearest__"
+
+  #IMAGE TO VIDEO NEAREST
+  RANK=2048 ; LORA_ALPHA=$RANK #Default: 128 
+  RESUME_TITLE="CHECKPOINT_I2V5B_resum_blendnorm_i26600" ; RESUME_FROM_CHECKPOINT=${!RESUME_TITLE}
+  BASE_MODEL_NAME='THUDM/CogVideoX-5b-I2V' ; MODEL_TYPE='I2V-Image-To-Video'
+  HANDWRITTEN_TITLE="NEAREST_OVERTIME__EnvatoFromWebvidContinued__"
+  ryan_data_noise_downtemp_interp='nearest' #nearest, blend, blend_norm
+  MAX_TRAIN_STEPS=("60000")
 
 #<<<CARTRIDGES END>>>
 
