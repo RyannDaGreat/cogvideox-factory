@@ -34,6 +34,7 @@ lora_paths = dict(
     I2V5B_resum_blendnorm_i26600_webvid         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__EnvatoFromWebvid__resume=CHECKPOINT_I2V5B_i2v_webvid_i13400__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={2048}__2024-10-30T10-58-22-0400/checkpoint-26600/pytorch_lora_weights.safetensors",
     I2V5B_resum_blendnorm_i30000_webvid         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-i2v__EnvatoFromWebvid__resume=CHECKPOINT_I2V5B_i2v_webvid_i13400__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={2048}__2024-10-30T10-58-22-0400/checkpoint-29800/pytorch_lora_weights.safetensors",
     I2V5B_final_i30000                          = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-EnvatoFromWebvidContinued__resume=CHECKPOINT_I2V5B_resum_blendnorm_i26600__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={2048}__2024-11-03T21-11-57-0500/checkpoint-29800/pytorch_lora_weights.safetensors",
+    I2V5B_final_i38800_nearest                  = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-NEAREST_OVERTIME__EnvatoFromWebvidContinued____resume=CHECKPOINT_I2V5B_resum_blendnorm_i26600__degrad=0,1__downtemp=nearest__lr=1e-4__rank={2048}__2024-11-10T09-48-33-0500/checkpoint-38800/pytorch_lora_weights.safetensors",
 
     T2V5B_blendnorm_i1800_envato         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-1800/pytorch_lora_weights.safetensors",
     T2V5B_blendnorm_i2000_envato         = "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvatoFromScratch__resume=__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-03T15-35-06-0500/checkpoint-2000/pytorch_lora_weights.safetensors",
@@ -49,6 +50,7 @@ lora_paths = dict(
     T2V5B_blendnorm_i11000_envato_nearest= "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvato__ResumeWithNearest____resume=CHECKPOINT_T2V5B_blendnorm_i9400_envato__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-05T16-00-32-0500/checkpoint-11000/pytorch_lora_weights.safetensors",
     T2V5B_blendnorm_i16400_envato_nearest= "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvato__ResumeWithNearest____resume=CHECKPOINT_T2V5B_blendnorm_i9400_envato__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-05T16-00-32-0500/checkpoint-16400/pytorch_lora_weights.safetensors",
     T2V5B_blendnorm_i18000_envato_nearest= "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvato__ResumeWithNearest____resume=CHECKPOINT_T2V5B_blendnorm_i11200_envato__degrad=0,1__downtemp=blend_norm__lr=1e-4__rank={3072}__2024-11-06T01-17-49-0500/checkpoint-18000/pytorch_lora_weights.safetensors",
+    T2V5B_blendnorm_i25000_envato_nearest= "/root/CleanCode/Github/cogvideox-factory/outputs/models/cogx-lora-TextToVideoFromEnvato__ResumeWithNearest____resume=CHECKPOINT_T2V5B_blendnorm_i18000_envato_nearest__degrad=0,1__downtemp=nearest__lr=1e-4__rank={3072}__2024-11-10T09-44-21-0500/checkpoint-25000/pytorch_lora_weights.safetensors",
 )
 #To get the trained LoRA paths:
 #     >>> lora_paths =glob.glob('/root/CleanCode/Github/CogVideo/finetune/*/*/saved_weights_copy/pytorch_lora_weights.safetensors') #For Old Training Codebase (T2V)
@@ -175,6 +177,18 @@ def load_sample_cartridge(
     sample_gif_path = sample_path+'.mp4'
     if not rp.file_exists(sample_gif_path):
         sample_gif_path = sample_path+'.gif' #The older scripts made this. Backwards compatibility.
+    if not rp.file_exists(sample_gif_path):
+        #Create one!
+        #Clientside warped noise does not come with a nice GIF so we make one here and now!
+        sample_gif_path = sample_path+'.mp4'
+
+        rp.fansi_print("MAKING SAMPLE PREVIEW VIDEO",'light blue green','underlined')
+        preview_sample_video=rp.as_numpy_images(sample_video)/2+.5
+        preview_sample_noise=rp.as_numpy_images(sample_noise)[:,:,:,:3]/5+.5
+        preview_sample_noise = rp.resize_images(preview_sample_noise, size=8, interp="nearest")
+        preview_sample=rp.horizontally_concatenated_videos(preview_sample_video,preview_sample_noise)
+        save_video_mp4(preview_sample,sample_gif_path,video_bitrate='max',framerate=12)
+        rp.fansi_print("DONE MAKING SAMPLE PREVIEW VIDEO!",'light blue green','underlined')
 
     #prompt=sample.instance_prompt
     downtemp_noise = ryan_dataset.downtemp_noise(
@@ -184,7 +198,7 @@ def load_sample_cartridge(
     downtemp_noise = downtemp_noise[None]
     downtemp_noise = nw.mix_new_noise(downtemp_noise, degradation)
 
-    assert downtemp_noise.shape == (B, F, C, H, W)
+    assert downtemp_noise.shape == (B, F, C, H, W), (noise.shape,(B, F, C, H, W))
 
     if image is None            : sample_image = rp.as_pil_image(rp.as_numpy_image(sample_video[0].float()/2+.5))
     elif isinstance(image, str) : sample_image = rp.as_pil_image(rp.as_rgb_image(rp.load_image(image)))
@@ -198,7 +212,7 @@ def load_sample_cartridge(
     if image  is None: image  = sample_image
     if prompt is None: prompt = sample_prompt
 
-    assert noise.shape == (B, F, C, H, W)
+    assert noise.shape == (B, F, C, H, W), (noise.shape,(B, F, C, H, W))
 
     return gather_vars('prompt noise image video metadata settings')
 
