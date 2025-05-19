@@ -345,6 +345,67 @@ class VideoFileCaptionFileListDataset(
         return {"sample_index": self._sample_index}
 
 
+# Valid noise files to look for (following the same convention as captions/videos)
+VALID_NOISE_FILES = ["noise.txt", "noises.txt", "custom_noise.txt", "custom_noises.txt"]
+
+
+class _NoiseFileDatasetMixin:
+    """Mixin that adds custom noise loading functionality to a dataset."""
+    
+    def _setup_noise_paths(self, root, parent_class):
+        """Set up noise paths from a noise list file."""
+        # Find noise file following same pattern as parent class
+        existing_noise_files = [file for file in VALID_NOISE_FILES if (root / file).exists()]
+        
+        if len(existing_noise_files) == 0:
+            raise FileNotFoundError(
+                f"No noise file found in {root}. Must have exactly one of {VALID_NOISE_FILES}"
+            )
+        if len(existing_noise_files) > 1:
+            raise ValueError(
+                f"Multiple noise files found in {root}. Must have exactly one of {VALID_NOISE_FILES}"
+            )
+            
+        noise_file = existing_noise_files[0]
+        
+        # Load noise paths
+        with open((root / noise_file).as_posix(), "r") as f:
+            noise_paths = f.read().splitlines()
+            noise_paths = [(root / path).as_posix() for path in noise_paths]
+
+        logger.info(f"Loaded {len(noise_paths)} noise paths from {noise_file}")
+        
+        self._noise_paths = noise_paths
+        self._parent_class = parent_class
+    
+    def __iter__(self):
+        # Get the parent iterator (depends on the class it's mixed with - I.E VideoFileCaptionFileListDataset or ImageFileCaptionFileListDataset)
+        parent_iter = self._parent_class.__iter__(self)
+        
+        for sample in parent_iter:
+            # Load noise for the current sample index
+            # -1 because _sample_index is incremented in parent's __iter__ but we need it for the current sample
+            noise_path = self._noise_paths[self._sample_index - 1]
+            sample["custom_noise"] = torch.load(noise_path)
+            yield sample
+
+
+class NoiseFileVideoFileCaptionFileListDataset(_NoiseFileDatasetMixin, VideoFileCaptionFileListDataset):
+    """Video dataset with custom noise tensors from a list file."""
+    
+    def __init__(self, root: str, infinite: bool = False) -> None:
+        VideoFileCaptionFileListDataset.__init__(self, root, infinite)
+        self._setup_noise_paths(self.root, VideoFileCaptionFileListDataset)
+
+
+class NoiseFileImageFileCaptionFileListDataset(_NoiseFileDatasetMixin, ImageFileCaptionFileListDataset):
+    """Image dataset with custom noise tensors from a list file."""
+    
+    def __init__(self, root: str, infinite: bool = False) -> None:
+        ImageFileCaptionFileListDataset.__init__(self, root, infinite)
+        self._setup_noise_paths(self.root, ImageFileCaptionFileListDataset)
+
+
 class ImageFolderDataset(torch.utils.data.IterableDataset, torch.distributed.checkpoint.stateful.Stateful):
     def __init__(self, root: str, infinite: bool = False) -> None:
         super().__init__()
@@ -821,6 +882,16 @@ class IterableCombinedDataset(torch.utils.data.IterableDataset, torch.distribute
 
 
 # TODO(aryan): maybe write a test for this
+def initialize_custom_noise_dataset(root: str, dataset_type: str = "video", infinite: bool = False):
+    """Initialize a dataset with custom noise tensors from noise.txt."""
+    if dataset_type == "video":
+        return NoiseFileVideoFileCaptionFileListDataset(root, infinite)
+    elif dataset_type == "image":
+        return NoiseFileImageFileCaptionFileListDataset(root, infinite)
+    else:
+        raise ValueError(f"Unsupported type: {dataset_type}. Use 'video' or 'image'.")
+
+
 def initialize_dataset(
     dataset_name_or_root: str,
     dataset_type: str = "video",
@@ -882,6 +953,15 @@ def _initialize_local_dataset(
     has_tar_or_parquet_files = any(file.endswith(".tar") or file.endswith(".parquet") for file in file_list)
     if has_tar_or_parquet_files:
         return _initialize_webdataset(root.as_posix(), dataset_type, infinite, _caption_options=_caption_options)
+
+    # Check for custom noise dataset (has noise file)
+    has_noise_file = any((root / file).exists() for file in VALID_NOISE_FILES)
+    if has_noise_file and _has_data_file_caption_file_lists(root, remote=False):
+        if dataset_type == "image":
+            dataset = NoiseFileImageFileCaptionFileListDataset(root.as_posix(), infinite=infinite)
+        else:
+            dataset = NoiseFileVideoFileCaptionFileListDataset(root.as_posix(), infinite=infinite)
+        return dataset
 
     if _has_data_caption_file_pairs(root, remote=False):
         if dataset_type == "image":

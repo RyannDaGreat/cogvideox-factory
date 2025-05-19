@@ -1,6 +1,8 @@
 from ._artifact import ImageArtifact, VideoArtifact
 from .dataloader import DPDataLoader
 from .dataset import (
+    CustomNoiseImageDataset,
+    CustomNoiseVideoDataset,
     ImageCaptionFilePairDataset,
     ImageFileCaptionFileListDataset,
     ImageFolderDataset,
