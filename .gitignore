@@ -177,3 +177,22 @@ validation_dataset/
 wan-framepack/
 
 !requirements.txt
+
+
+#Vim Files
+*.pyc
+*.bak
+*.swh
+*.swi
+*.swj
+*.swk
+*.swl
+*.swm
+*.swn
+*.swo
+*.swp
+*.un~
+
+#MacOS Files
+*.DS_Store
+
