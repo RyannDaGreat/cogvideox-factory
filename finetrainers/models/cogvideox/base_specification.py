@@ -288,7 +288,7 @@ class CogVideoXModelSpecification(ModelSpecification):
 
         timesteps = (sigmas.flatten() * 1000.0).long()
 
-        noise = torch.zeros_like(latents).normal_(generator=generator)
+        noise = FF.get_noise(latents, latent_model_conditions, generator)
         noisy_latents = scheduler.add_noise(latents, noise, timesteps)
 
         batch_size, num_frames, num_channels, height, width = latents.shape

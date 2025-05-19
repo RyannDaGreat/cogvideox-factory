@@ -310,7 +310,7 @@ class HunyuanVideoModelSpecification(ModelSpecification):
             del posterior
 
         latents = latents * self.vae_config.scaling_factor
-        noise = torch.zeros_like(latents).normal_(generator=generator)
+        noise = FF.get_noise(latents, latent_model_conditions, generator)
         noisy_latents = FF.flow_match_xt(latents, noise, sigmas)
 
         timesteps = (sigmas.flatten() * 1000.0).long()

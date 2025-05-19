@@ -293,7 +293,7 @@ class LTXVideoModelSpecification(ModelSpecification):
         latents_std = latent_model_conditions.pop("latents_std")
 
         latents = self._normalize_latents(latents, latents_mean, latents_std)
-        noise = torch.zeros_like(latents).normal_(generator=generator)
+        noise = FF.get_noise(latents, latent_model_conditions, generator)
 
         if random.random() < first_frame_conditioning_p:
             # Based on Section 2.4 of the paper, it mentions that the first frame timesteps should be a small random value.

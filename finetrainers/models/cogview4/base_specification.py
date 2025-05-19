@@ -301,7 +301,7 @@ class CogView4ModelSpecification(ModelSpecification):
         else:
             latents = latents * self.vae_config.scaling_factor
 
-        noise = torch.zeros_like(latents).normal_(generator=generator)
+        noise = FF.get_noise(latents, latent_model_conditions, generator)
         timesteps = (sigmas.flatten() * 1000.0).long()
 
         image_sequence_length = latents.size(2) * latents.size(3) // self.transformer_config.patch_size**2

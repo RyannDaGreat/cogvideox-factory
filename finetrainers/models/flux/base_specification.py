@@ -310,7 +310,7 @@ class FluxModelSpecification(ModelSpecification):
         else:
             latents = latents * self.vae_config.scaling_factor
 
-        noise = torch.zeros_like(latents).normal_(generator=generator)
+        noise = FF.get_noise(latents, latent_model_conditions, generator)
         timesteps = (sigmas.flatten() * 1000.0).long()
         img_ids = FluxPipeline._prepare_latent_image_ids(
             latents.size(0), latents.size(2) // 2, latents.size(3) // 2, latents.device, latents.dtype
