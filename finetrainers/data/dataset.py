@@ -867,20 +867,6 @@ def initialize_dataset(
     _caption_options: Optional[Dict[str, Any]] = None,
     auxiliary_data: Optional[List[str]] = None,
 ) -> torch.utils.data.IterableDataset:
-    """
-    Initialize a dataset from a name or root directory.
-
-    Args:
-        dataset_name_or_root: Name of dataset or root directory
-        dataset_type: Type of dataset ("image" or "video")
-        streaming: Whether to stream the dataset
-        infinite: Whether the dataset should loop infinitely
-        _caption_options: Options for caption handling
-        auxiliary_data: List of auxiliary data types to load (defaults to ["noise"])
-
-    Returns:
-        An initialized dataset
-    """
     assert dataset_type in ["image", "video"]
 
     try:
@@ -889,20 +875,10 @@ def initialize_dataset(
         does_repo_exist_on_hub = False
 
     if does_repo_exist_on_hub:
-        return _initialize_hub_dataset(
-            dataset_name_or_root,
-            dataset_type,
-            infinite,
-            _caption_options=_caption_options,
-            auxiliary_data=auxiliary_data
-        )
+        return _initialize_hub_dataset(dataset_name_or_root, dataset_type, infinite, _caption_options=_caption_options, auxiliary_data=auxiliary_data)
     else:
         return _initialize_local_dataset(
-            dataset_name_or_root,
-            dataset_type,
-            infinite,
-            _caption_options=_caption_options,
-            auxiliary_data=auxiliary_data
+                dataset_name_or_root, dataset_type, infinite, _caption_options=_caption_options, auxiliary_data=auxiliary_data
         )
 
 
@@ -924,7 +900,7 @@ def _initialize_local_dataset(
     infinite: bool = False,
     *,
     _caption_options: Optional[Dict[str, Any]] = None,
-    auxiliary_data: Optional[List[str]] = None,
+    auxiliary_data: Optional[List[str]] = None
 ):
     root = pathlib.Path(dataset_name_or_root)
     supported_metadata_files = ["metadata.json", "metadata.jsonl", "metadata.csv"]
@@ -944,12 +920,7 @@ def _initialize_local_dataset(
     file_list = find_files(root.as_posix(), "*", depth=100)
     has_tar_or_parquet_files = any(file.endswith(".tar") or file.endswith(".parquet") for file in file_list)
     if has_tar_or_parquet_files:
-        return _initialize_webdataset(
-            root.as_posix(),
-            dataset_type,
-            infinite,
-            _caption_options=_caption_options
-        )
+        return _initialize_webdataset(root.as_posix(), dataset_type, infinite, _caption_options=_caption_options)
 
     if _has_data_caption_file_pairs(root, remote=False):
         if dataset_type == "image":
@@ -958,17 +929,9 @@ def _initialize_local_dataset(
             dataset = VideoCaptionFilePairDataset(root.as_posix(), infinite=infinite)
     elif _has_data_file_caption_file_lists(root, remote=False):
         if dataset_type == "image":
-            dataset = ImageFileCaptionFileListDataset(
-                root.as_posix(),
-                infinite=infinite,
-                auxiliary_data_types=auxiliary_data
-            )
+            dataset = ImageFileCaptionFileListDataset(root.as_posix(), infinite=infinite, auxiliary_data_types=auxiliary_data)
         else:
-            dataset = VideoFileCaptionFileListDataset(
-                root.as_posix(),
-                infinite=infinite,
-                auxiliary_data_types=auxiliary_data
-            )
+            dataset = VideoFileCaptionFileListDataset(root.as_posix(), infinite=infinite, auxiliary_data_types=auxiliary_data)
     else:
         raise ValueError(
             f"Could not find any supported dataset structure in the directory {root}. Please open an issue at "
@@ -980,32 +943,17 @@ def _initialize_local_dataset(
 
 
 def _initialize_hub_dataset(
-    dataset_name: str,
-    dataset_type: str,
-    infinite: bool = False,
-    *,
-    _caption_options: Optional[Dict[str, Any]] = None,
-    auxiliary_data: Optional[List[str]] = None
+        dataset_name: str, dataset_type: str, infinite: bool = False, *, _caption_options: Optional[Dict[str, Any]] = None, auxiliary_data: Optional[List[str]] = None
 ):
     repo_file_list = list_repo_files(dataset_name, repo_type="dataset")
     if _has_data_caption_file_pairs(repo_file_list, remote=True):
         return _initialize_data_caption_file_dataset_from_hub(dataset_name, dataset_type, infinite)
     elif _has_data_file_caption_file_lists(repo_file_list, remote=True):
-        return _initialize_data_file_caption_file_dataset_from_hub(
-            dataset_name,
-            dataset_type,
-            infinite,
-            auxiliary_data=auxiliary_data
-        )
+        return _initialize_data_file_caption_file_dataset_from_hub(dataset_name, dataset_type, infinite, auxiliary_data=auxiliary_data)
 
     has_tar_or_parquet_files = any(file.endswith(".tar") or file.endswith(".parquet") for file in repo_file_list)
     if has_tar_or_parquet_files:
-        return _initialize_webdataset(
-            dataset_name,
-            dataset_type,
-            infinite,
-            _caption_options=_caption_options
-        )
+        return _initialize_webdataset(dataset_name, dataset_type, infinite, _caption_options=_caption_options)
 
     # TODO(aryan): This should be improved
     caption_files = [pathlib.Path(file).name for file in repo_file_list if file.endswith(".txt")]
@@ -1035,33 +983,18 @@ def _initialize_data_caption_file_dataset_from_hub(
 
 
 def _initialize_data_file_caption_file_dataset_from_hub(
-    dataset_name: str,
-    dataset_type: str,
-    infinite: bool = False,
-    auxiliary_data: Optional[List[str]] = None
+        dataset_name: str, dataset_type: str, infinite: bool = False, auxiliary_data: Optional[List[str]] = None
 ) -> torch.utils.data.IterableDataset:
     logger.info(f"Downloading dataset {dataset_name} from the HF Hub")
     dataset_root = snapshot_download(dataset_name, repo_type="dataset")
     if dataset_type == "image":
-        return ImageFileCaptionFileListDataset(
-            dataset_root,
-            infinite=infinite,
-            auxiliary_data_types=auxiliary_data
-        )
+        return ImageFileCaptionFileListDataset(dataset_root, infinite=infinite, auxiliary_data_types=auxiliary_data)
     else:
-        return VideoFileCaptionFileListDataset(
-            dataset_root,
-            infinite=infinite,
-            auxiliary_data_types=auxiliary_data
-        )
+        return VideoFileCaptionFileListDataset(dataset_root, infinite=infinite, auxiliary_data_types=auxiliary_data)
 
 
 def _initialize_webdataset(
-    dataset_name: str,
-    dataset_type: str,
-    infinite: bool = False,
-    _caption_options: Optional[Dict[str, Any]] = None,
-    auxiliary_data: Optional[List[str]] = None
+        dataset_name: str, dataset_type: str, infinite: bool = False, _caption_options: Optional[Dict[str, Any]] = None, auxiliary_data: Optional[List[str]] = None
 ) -> torch.utils.data.IterableDataset:
     logger.info(f"Streaming webdataset {dataset_name} from the HF Hub")
     _caption_options = _caption_options or {}
