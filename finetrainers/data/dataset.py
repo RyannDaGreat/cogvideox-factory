@@ -242,6 +242,31 @@ class ImageFileCaptionFileListDataset(
         self._sample_index = 0
         self._precomputable_once = len(data) <= MAX_PRECOMPUTABLE_ITEMS_LIMIT
 
+        VALID_NOISE_FILES = ["noise.txt", "noises.txt"]
+        existing_noise_files = [file for file in VALID_NOISE_FILES if (self.root / file).exists()]
+
+        if existing_noise_files:
+            if len(existing_noise_files) > 1:
+                raise ValueError(
+                    f"Multiple noise files found in {self.root}. Must have exactly one of {VALID_NOISE_FILES}"
+                )
+
+            noise_file = existing_noise_files[0]
+
+            with open((self.root / noise_file).as_posix(), "r") as f:
+                noise_paths = f.read().splitlines()
+                noise_paths = [(self.root / path).as_posix() for path in noise_paths]
+
+            if len(noise_paths) != len(captions):
+                raise ValueError(f"Number of noise files ({len(noise_paths)}) must match number of captions ({len(captions)})")
+
+            logger.info(f"Loaded {len(self._noise_paths)} noise paths from {noise_file}")
+
+            self._noise_paths = noise_paths
+            self._has_custom_noise = True
+        else:
+            self._has_custom_noise = False
+
     def _get_data_iter(self):
         if self._sample_index == 0:
             return iter(self._data)
@@ -250,6 +275,10 @@ class ImageFileCaptionFileListDataset(
     def __iter__(self):
         while True:
             for sample in self._get_data_iter():
+                if self._has_custom_noise:
+                    noise_path = self._noise_paths[self._sample_index]
+                    sample["custom_noise"] = torch.load(noise_path)
+
                 self._sample_index += 1
                 yield sample
 
@@ -321,6 +350,31 @@ class VideoFileCaptionFileListDataset(
         self._sample_index = 0
         self._precomputable_once = len(data) <= MAX_PRECOMPUTABLE_ITEMS_LIMIT
 
+        VALID_NOISE_FILES = ["noise.txt", "noises.txt"]
+        existing_noise_files = [file for file in VALID_NOISE_FILES if (self.root / file).exists()]
+
+        if existing_noise_files:
+            if len(existing_noise_files) > 1:
+                raise ValueError(
+                    f"Multiple noise files found in {self.root}. Must have exactly one of {VALID_NOISE_FILES}"
+                )
+
+            noise_file = existing_noise_files[0]
+
+            with open((self.root / noise_file).as_posix(), "r") as f:
+                noise_paths = f.read().splitlines()
+                noise_paths = [(self.root / path).as_posix() for path in noise_paths]
+
+            if len(noise_paths) != len(captions):
+                raise ValueError(f"Number of noise files ({len(noise_paths)}) must match number of captions ({len(captions)})")
+
+            logger.info(f"Loaded {len(self._noise_paths)} noise paths from {noise_file}")
+
+            self._noise_paths = noise_paths
+            self._has_custom_noise = True
+        else:
+            self._has_custom_noise = False
+
     def _get_data_iter(self):
         if self._sample_index == 0:
             return iter(self._data)
@@ -329,6 +383,10 @@ class VideoFileCaptionFileListDataset(
     def __iter__(self):
         while True:
             for sample in self._get_data_iter():
+                if self._has_custom_noise:
+                    noise_path = self._noise_paths[self._sample_index]
+                    sample["custom_noise"] = torch.load(noise_path)
+
                 self._sample_index += 1
                 yield sample
 
