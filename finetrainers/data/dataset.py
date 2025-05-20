@@ -242,30 +242,7 @@ class ImageFileCaptionFileListDataset(
         self._sample_index = 0
         self._precomputable_once = len(data) <= MAX_PRECOMPUTABLE_ITEMS_LIMIT
 
-        VALID_NOISE_FILES = ["noise.txt", "noises.txt"]
-        existing_noise_files = [file for file in VALID_NOISE_FILES if (self.root / file).exists()]
-
-        if existing_noise_files:
-            if len(existing_noise_files) > 1:
-                raise ValueError(
-                    f"Multiple noise files found in {self.root}. Must have exactly one of {VALID_NOISE_FILES}"
-                )
-
-            noise_file = existing_noise_files[0]
-
-            with open((self.root / noise_file).as_posix(), "r") as f:
-                noise_paths = f.read().splitlines()
-                noise_paths = [(self.root / path).as_posix() for path in noise_paths]
-
-            if len(noise_paths) != len(captions):
-                raise ValueError(f"Number of noise files ({len(noise_paths)}) must match number of captions ({len(captions)})")
-
-            logger.info(f"Loaded {len(self._noise_paths)} noise paths from {noise_file}")
-
-            self._noise_paths = noise_paths
-            self._has_custom_noise = True
-        else:
-            self._has_custom_noise = False
+        self._noise_paths = _get_noise_paths(self.root, captions)
 
     def _get_data_iter(self):
         if self._sample_index == 0:
@@ -275,7 +252,7 @@ class ImageFileCaptionFileListDataset(
     def __iter__(self):
         while True:
             for sample in self._get_data_iter():
-                if self._has_custom_noise:
+                if self._noise_paths:
                     noise_path = self._noise_paths[self._sample_index]
                     sample["custom_noise"] = torch.load(noise_path)
 
@@ -350,30 +327,7 @@ class VideoFileCaptionFileListDataset(
         self._sample_index = 0
         self._precomputable_once = len(data) <= MAX_PRECOMPUTABLE_ITEMS_LIMIT
 
-        VALID_NOISE_FILES = ["noise.txt", "noises.txt"]
-        existing_noise_files = [file for file in VALID_NOISE_FILES if (self.root / file).exists()]
-
-        if existing_noise_files:
-            if len(existing_noise_files) > 1:
-                raise ValueError(
-                    f"Multiple noise files found in {self.root}. Must have exactly one of {VALID_NOISE_FILES}"
-                )
-
-            noise_file = existing_noise_files[0]
-
-            with open((self.root / noise_file).as_posix(), "r") as f:
-                noise_paths = f.read().splitlines()
-                noise_paths = [(self.root / path).as_posix() for path in noise_paths]
-
-            if len(noise_paths) != len(captions):
-                raise ValueError(f"Number of noise files ({len(noise_paths)}) must match number of captions ({len(captions)})")
-
-            logger.info(f"Loaded {len(self._noise_paths)} noise paths from {noise_file}")
-
-            self._noise_paths = noise_paths
-            self._has_custom_noise = True
-        else:
-            self._has_custom_noise = False
+        self._noise_paths = _get_noise_paths(self.root, captions)
 
     def _get_data_iter(self):
         if self._sample_index == 0:
@@ -383,7 +337,7 @@ class VideoFileCaptionFileListDataset(
     def __iter__(self):
         while True:
             for sample in self._get_data_iter():
-                if self._has_custom_noise:
+                if self._noise_paths:
                     noise_path = self._noise_paths[self._sample_index]
                     sample["custom_noise"] = torch.load(noise_path)
 
@@ -1063,6 +1017,39 @@ def _has_data_file_caption_file_lists(root: Union[pathlib.Path, List[str]], remo
 def _read_caption_from_file(filename: str) -> str:
     with open(filename, "r") as f:
         return f.read().strip()
+
+
+def _get_noise_paths(root: pathlib.Path, captions: List) -> Optional[List[str]]:
+    """
+    Helper function to set up custom noise file paths if they exist.
+
+    Args:
+        root: Root directory containing the dataset
+        captions: List of captions to match noise files with (for length validation)
+
+    Returns:
+        - List of noise file paths if available, otherwise None
+    """
+    VALID_NOISE_FILES = ["noise.txt", "noises.txt"]
+
+    existing_noise_files = [file for file in VALID_NOISE_FILES if (root / file).exists()]
+
+    if existing_noise_files:
+        if len(existing_noise_files) > 1:
+            raise ValueError(f"Multiple noise files found in {root}. Must have exactly one of {VALID_NOISE_FILES}")
+
+        noise_file = existing_noise_files[0]
+
+        with open((root / noise_file).as_posix(), "r") as f:
+            noise_paths = f.read().splitlines()
+            noise_paths = [(root / path).as_posix() for path in noise_paths]
+
+        if len(noise_paths) != len(captions):
+            raise ValueError(f"Number of noise files ({len(noise_paths)}) must match number of captions ({len(captions)})")
+
+        logger.info(f"Loaded {len(noise_paths)} noise paths from {noise_file}")
+
+    return noise_paths
 
 
 def _preprocess_image(image: PIL.Image.Image) -> torch.Tensor:
