@@ -23,7 +23,7 @@ from finetrainers import functional as FF
 from finetrainers.logging import get_logger
 from finetrainers.utils import find_files
 from finetrainers.utils.import_utils import is_datasets_version
-from finetrainers.data.auxiliary_datatypes import get_auxiliary_data_paths, load_auxiliary_data, auxiliary_datatypes
+from finetrainers.data.auxiliary_datatypes import load_auxiliary_data_paths, process_auxiliary_data_for_sample
 
 
 import decord  # isort:skip
@@ -199,7 +199,7 @@ class ImageFileCaptionFileListDataset(
 
         self.root = pathlib.Path(root)
         self.infinite = infinite
-        self.auxiliary_data_types = auxiliary_data_types or ["noise"]  # Default to noise
+        self.auxiliary_data_types = auxiliary_data_types
 
         data = []
         existing_caption_files = [file for file in VALID_CAPTION_FILES if (self.root / file).exists()]
@@ -244,16 +244,7 @@ class ImageFileCaptionFileListDataset(
         self._sample_index = 0
         self._precomputable_once = len(data) <= MAX_PRECOMPUTABLE_ITEMS_LIMIT
 
-        # Load auxiliary data paths
-        self._auxiliary_data_paths = {}
-        for aux_type in self.auxiliary_data_types:
-            paths = get_auxiliary_data_paths(self.root, captions, aux_type)
-            if paths:
-                self._auxiliary_data_paths[aux_type] = paths
-                logger.info(f"Loaded auxiliary data type: {aux_type}")
-
-        # For compatibility with existing code
-        self._noise_paths = self._auxiliary_data_paths.get("noise", [])
+        self._auxiliary_data_paths = load_auxiliary_data_paths(self.root, captions, self.auxiliary_data_types)
 
     def _get_data_iter(self):
         if self._sample_index == 0:
@@ -263,11 +254,7 @@ class ImageFileCaptionFileListDataset(
     def __iter__(self):
         while True:
             for sample in self._get_data_iter():
-                # Add all available auxiliary data to the sample
-                for aux_type, paths in self._auxiliary_data_paths.items():
-                    if paths:
-                        path = paths[self._sample_index]
-                        sample[aux_type] = load_auxiliary_data(aux_type, path)
+                sample = process_auxiliary_data_for_sample(sample, self._auxiliary_data_paths, self._sample_index)
 
                 self._sample_index += 1
                 yield sample
@@ -296,7 +283,7 @@ class VideoFileCaptionFileListDataset(
 
         self.root = pathlib.Path(root)
         self.infinite = infinite
-        self.auxiliary_data_types = auxiliary_data_types or ["noise"]  # Default to noise
+        self.auxiliary_data_types = auxiliary_data_types
 
         data = []
         existing_caption_files = [file for file in VALID_CAPTION_FILES if (self.root / file).exists()]
@@ -341,16 +328,7 @@ class VideoFileCaptionFileListDataset(
         self._sample_index = 0
         self._precomputable_once = len(data) <= MAX_PRECOMPUTABLE_ITEMS_LIMIT
 
-        # Load auxiliary data paths
-        self._auxiliary_data_paths = {}
-        for aux_type in self.auxiliary_data_types:
-            paths = get_auxiliary_data_paths(self.root, captions, aux_type)
-            if paths:
-                self._auxiliary_data_paths[aux_type] = paths
-                logger.info(f"Loaded auxiliary data type: {aux_type}")
-
-        # For compatibility with existing code
-        self._noise_paths = self._auxiliary_data_paths.get("noise", [])
+        self._auxiliary_data_paths = load_auxiliary_data_paths(self.root, captions, self.auxiliary_data_types)
 
     def _get_data_iter(self):
         if self._sample_index == 0:
@@ -360,11 +338,7 @@ class VideoFileCaptionFileListDataset(
     def __iter__(self):
         while True:
             for sample in self._get_data_iter():
-                # Add all available auxiliary data to the sample
-                for aux_type, paths in self._auxiliary_data_paths.items():
-                    if paths:
-                        path = paths[self._sample_index]
-                        sample[aux_type] = load_auxiliary_data(aux_type, path)
+                sample = process_auxiliary_data_for_sample(sample, self._auxiliary_data_paths, self._sample_index)
 
                 self._sample_index += 1
                 yield sample
@@ -878,7 +852,7 @@ def initialize_dataset(
         return _initialize_hub_dataset(dataset_name_or_root, dataset_type, infinite, _caption_options=_caption_options, auxiliary_data=auxiliary_data)
     else:
         return _initialize_local_dataset(
-                dataset_name_or_root, dataset_type, infinite, _caption_options=_caption_options, auxiliary_data=auxiliary_data
+            dataset_name_or_root, dataset_type, infinite, _caption_options=_caption_options, auxiliary_data=auxiliary_data
         )
 
 
@@ -983,7 +957,7 @@ def _initialize_data_caption_file_dataset_from_hub(
 
 
 def _initialize_data_file_caption_file_dataset_from_hub(
-        dataset_name: str, dataset_type: str, infinite: bool = False, auxiliary_data: Optional[List[str]] = None
+    dataset_name: str, dataset_type: str, infinite: bool = False, auxiliary_data: Optional[List[str]] = None
 ) -> torch.utils.data.IterableDataset:
     logger.info(f"Downloading dataset {dataset_name} from the HF Hub")
     dataset_root = snapshot_download(dataset_name, repo_type="dataset")
@@ -994,12 +968,10 @@ def _initialize_data_file_caption_file_dataset_from_hub(
 
 
 def _initialize_webdataset(
-        dataset_name: str, dataset_type: str, infinite: bool = False, _caption_options: Optional[Dict[str, Any]] = None, auxiliary_data: Optional[List[str]] = None
+    dataset_name: str, dataset_type: str, infinite: bool = False, _caption_options: Optional[Dict[str, Any]] = None
 ) -> torch.utils.data.IterableDataset:
     logger.info(f"Streaming webdataset {dataset_name} from the HF Hub")
     _caption_options = _caption_options or {}
-    # Currently WebDataset doesn't support auxiliary data, but we add the parameter
-    # for future compatibility
     if dataset_type == "image":
         return ImageWebDataset(dataset_name, infinite=infinite, **_caption_options)
     else:
@@ -1046,20 +1018,6 @@ def _has_data_file_caption_file_lists(root: Union[pathlib.Path, List[str]], remo
 def _read_caption_from_file(filename: str) -> str:
     with open(filename, "r") as f:
         return f.read().strip()
-
-
-def _get_noise_paths(root: pathlib.Path, captions: List) -> Optional[List[str]]:
-    """
-    Helper function to set up custom noise file paths if they exist.
-
-    Args:
-        root: Root directory containing the dataset
-        captions: List of captions to match noise files with (for length validation)
-
-    Returns:
-        - List of noise file paths if available, otherwise None
-    """
-    return get_auxiliary_data_paths(root, captions, "noise")
 
 
 def _preprocess_image(image: PIL.Image.Image) -> torch.Tensor:
