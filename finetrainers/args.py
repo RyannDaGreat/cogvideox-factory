@@ -403,6 +403,7 @@ class BaseArgs:
     precomputation_dir: Optional[str] = None
     precomputation_once: bool = False
     precomputation_reuse: bool = False
+    auxiliary_data: Optional[List[str]] = None
 
     # Dataloader arguments
     dataloader_num_workers: int = 0
@@ -528,6 +529,7 @@ class BaseArgs:
             "precomputation_dir": self.precomputation_dir,
             "precomputation_once": self.precomputation_once,
             "precomputation_reuse": self.precomputation_reuse,
+            "auxiliary_data": self.auxiliary_data,
         }
         dataset_arguments = get_non_null_items(dataset_arguments)
 
@@ -763,6 +765,13 @@ def _add_dataset_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--precomputation_dir", type=str, default=None)
     parser.add_argument("--precomputation_once", action="store_true")
     parser.add_argument("--precomputation_reuse", action="store_true")
+    parser.add_argument(
+        "--auxiliary_data", 
+        type=str, 
+        nargs="+", 
+        help="Space-separated list of auxiliary data types to load (e.g., 'noise canny mask')",
+        default=None
+    )
 
 
 def _add_dataloader_arguments(parser: argparse.ArgumentParser) -> None:
@@ -924,6 +933,7 @@ def _map_to_args_type(args: Dict[str, Any]) -> BaseArgs:
     result_args.precomputation_dir = args.precomputation_dir or os.path.join(args.output_dir, "precomputed")
     result_args.precomputation_once = args.precomputation_once
     result_args.precomputation_reuse = args.precomputation_reuse
+    result_args.auxiliary_data = args.auxiliary_data
 
     # Dataloader arguments
     result_args.dataloader_num_workers = args.dataloader_num_workers
