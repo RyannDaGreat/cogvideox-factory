@@ -22,15 +22,15 @@ def get_noise(
 
     Args:
         latents: The latent tensor to match noise shape with
-        latent_model_conditions: Dictionary containing model conditions, which may include custom_noise
+        latent_model_conditions: Dictionary containing model conditions, which may include "noise"
         generator: Optional random generator for reproducibility
 
     Returns:
         torch.Tensor: The noise tensor (either custom or randomly generated)
     """
-    if "custom_noise" in latent_model_conditions:
+    if "noise" in latent_model_conditions:
         # Use custom noise for Go With The Flow
-        noise = latent_model_conditions["custom_noise"].to(device=latents.device, dtype=latents.dtype)
+        noise = latent_model_conditions["noise"].to(device=latents.device, dtype=latents.dtype)
         if noise.shape != latents.shape:
             raise ValueError(f"Custom noise shape {noise.shape} does not match latent shape {latents.shape}")
     else:

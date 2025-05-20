@@ -254,7 +254,7 @@ class ImageFileCaptionFileListDataset(
             for sample in self._get_data_iter():
                 if self._noise_paths:
                     noise_path = self._noise_paths[self._sample_index]
-                    sample["custom_noise"] = torch.load(noise_path)
+                    sample["noise"] = torch.load(noise_path)
 
                 self._sample_index += 1
                 yield sample
@@ -339,7 +339,7 @@ class VideoFileCaptionFileListDataset(
             for sample in self._get_data_iter():
                 if self._noise_paths:
                     noise_path = self._noise_paths[self._sample_index]
-                    sample["custom_noise"] = torch.load(noise_path)
+                    sample["noise"] = torch.load(noise_path)
 
                 self._sample_index += 1
                 yield sample
