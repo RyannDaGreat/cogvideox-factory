@@ -148,7 +148,17 @@ class SFTTrainer(Trainer):
             model_specification.apply_tensor_parallel(
                 backend=parallel.ParallelBackendEnum.PTD,
                 device_mesh=parallel_backend.get_mesh()["tp"],
-                transformer=self.transformer,
+
+                # Text encoders
+                text_encoder = self.text_encoder,
+                text_encoder_2 = self.text_encoder_2,
+                text_encoder_3 = self.text_encoder_3,
+
+                # Denoisers
+                transformer = self.transformer,
+
+                # Autoencoders
+                vae = self.vae,
             )
 
         # Enable gradient checkpointing
