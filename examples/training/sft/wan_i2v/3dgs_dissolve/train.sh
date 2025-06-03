@@ -46,22 +46,22 @@ parallel_cmd=(
 model_cmd=(
   --model_name "wan"
   --pretrained_model_name_or_path "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
-  --compile_modules text_encoder image_encoder transformer vae
-  --compile_scopes regional
+  # --compile_modules text_encoder image_encoder transformer vae
+  # --compile_scopes regional
 )
 
 # Dataset arguments
 dataset_cmd=(
   --dataset_config $TRAINING_DATASET_CONFIG
-  --dataset_shuffle_buffer_size 32
-  --enable_precomputation
-  --precomputation_items 50
-  --precomputation_once
+  --dataset_shuffle_buffer_size 1
+  # --enable_precomputation
+  # --precomputation_items 50
+  # --precomputation_once
 )
 
 # Dataloader arguments
 dataloader_cmd=(
-  --dataloader_num_workers 0
+  --dataloader_num_workers 1
 )
 
 # Diffusion arguments
