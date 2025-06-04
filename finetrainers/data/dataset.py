@@ -234,6 +234,8 @@ class ImageFileCaptionFileListDataset(
         if len(captions) != len(images):
             raise ValueError(f"Number of captions ({len(captions)}) must match number of images ({len(images)})")
 
+        self._auxiliary_data_paths = load_auxiliary_data_paths(self.root, captions, self.auxiliary_data_types)
+
         for caption, image in zip(captions, images):
             data.append({"caption": caption, "image": image})
 
@@ -243,8 +245,6 @@ class ImageFileCaptionFileListDataset(
         self._data = data.to_iterable_dataset()
         self._sample_index = 0
         self._precomputable_once = len(data) <= MAX_PRECOMPUTABLE_ITEMS_LIMIT
-
-        self._auxiliary_data_paths = load_auxiliary_data_paths(self.root, captions, self.auxiliary_data_types)
 
     def _get_data_iter(self):
         if self._sample_index == 0:
@@ -318,6 +318,8 @@ class VideoFileCaptionFileListDataset(
         if len(captions) != len(videos):
             raise ValueError(f"Number of captions ({len(captions)}) must match number of videos ({len(videos)})")
 
+        self._auxiliary_data_paths = load_auxiliary_data_paths(self.root, captions, self.auxiliary_data_types)
+
         for caption, video in zip(captions, videos):
             data.append({"caption": caption, "video": video})
 
@@ -327,8 +329,6 @@ class VideoFileCaptionFileListDataset(
         self._data = data.to_iterable_dataset()
         self._sample_index = 0
         self._precomputable_once = len(data) <= MAX_PRECOMPUTABLE_ITEMS_LIMIT
-
-        self._auxiliary_data_paths = load_auxiliary_data_paths(self.root, captions, self.auxiliary_data_types)
 
     def _get_data_iter(self):
         if self._sample_index == 0:
