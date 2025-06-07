@@ -1,7 +1,8 @@
 {
   "datasets": [
     {
-      "data_root": "finetrainers/3dgs-dissolve",
+      // "data_root": "finetrainers/3dgs-dissolve",
+      "data_root": "/home/jupyter/CleanCode/Datasets/finetrainers/3dgs-dissolve",
       "dataset_type": "video",
       "id_token": "3DGS_DISSOLVE",
       "video_resolution_buckets": [

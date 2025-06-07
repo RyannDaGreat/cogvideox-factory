@@ -23,7 +23,7 @@ BACKEND="ptd"
 
 # In this setting, I'm using 1 GPU on a 4-GPU node for training
 NUM_GPUS=1
-CUDA_VISIBLE_DEVICES="3"
+CUDA_VISIBLE_DEVICES="8"
 
 # Check the JSON files for the expected JSON format
 TRAINING_DATASET_CONFIG="examples/training/sft/wan_i2v/3dgs_dissolve/training.json"
@@ -45,7 +45,8 @@ parallel_cmd=(
 # Model arguments
 model_cmd=(
   --model_name "wan"
-  --pretrained_model_name_or_path "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
+  # --pretrained_model_name_or_path "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
+  --pretrained_model_name_or_path "$HOME/CleanCode/Huggingface/Wan2.1-I2V-14B-480P-Diffusers"
   --compile_modules text_encoder image_encoder transformer vae
   --compile_scopes regional
 )
@@ -112,7 +113,7 @@ validation_cmd=(
 # Miscellaneous arguments
 miscellaneous_cmd=(
   --tracker_name "finetrainers-wan-i2v"
-  --output_dir "/raid/aryan/wan-i2v"
+  --output_dir "$HOME/CleanCode/Github/Finetrainers/RyanFinetrainers/OUTPUTS/wan"
   --init_timeout 600
   --nccl_timeout 600
   --report_to "wandb"
