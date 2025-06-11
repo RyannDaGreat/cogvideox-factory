@@ -30,43 +30,61 @@ def get_noise(
     Returns:
         torch.Tensor: The noise tensor (either custom or randomly generated),
     """
-    rp.fansi_print(f"GET_NOISE: latent_model_conditions keys = {list(latent_model_conditions.keys())}", 'cyan bold')
+    rp.fansi_print(f"GET_NOISE: ENTRY - latent_model_conditions keys = {list(latent_model_conditions.keys())}", 'cyan bold')
+    rp.fansi_print(f"GET_NOISE: ENTRY - latents shape = {latents.shape}", 'cyan bold')
     
     if "noise" in latent_model_conditions:
         # Use custom noise for Go With The Flow
-        noise = latent_model_conditions["noise"].to(device=latents.device, dtype=latents.dtype)
-        rp.fansi_print(f"GET_NOISE: Using custom noise with shape {noise.shape}, latents shape {latents.shape}", 'green bold')
+        original_noise = latent_model_conditions["noise"]
+        rp.fansi_print(f"GET_NOISE: FOUND CUSTOM NOISE - original shape = {original_noise.shape}, dtype = {original_noise.dtype}", 'green bold')
+        
+        noise = original_noise.to(device=latents.device, dtype=latents.dtype)
+        rp.fansi_print(f"GET_NOISE: MOVED TO DEVICE - noise shape = {noise.shape}, device = {noise.device}, dtype = {noise.dtype}", 'green bold')
         
         if noise.shape != latents.shape:
             B, C, T, H, W = latents.shape  # latents are BCTHW
             B_n, T_n, C_n, H_n, W_n = noise.shape  # noise is BTCHW
 
-            rp.fansi_print(f"RESIZING NOISE: old shape = {noise.shape}   --->   new shape == {latents.shape}", 'green orange bold italic on black black')
+            rp.fansi_print(f"RESIZING NOISE: SHAPE MISMATCH - old shape = {noise.shape} vs target = {latents.shape}", 'yellow bold')
+            rp.fansi_print(f"RESIZING NOISE: DIMENSIONS - latents BCTHW=({B},{C},{T},{H},{W}) vs noise BTCHW=({B_n},{T_n},{C_n},{H_n},{W_n})", 'yellow bold')
             assert B==1, 'Only use batch size 1 please, but B=='+str(B)
             
             # Remove batch dimension: BTCHW -> TCHW
             noise_frames = noise[0]  # [T, C, H, W]
+            rp.fansi_print(f"RESIZING NOISE: REMOVED BATCH - noise_frames shape = {noise_frames.shape}", 'yellow bold')
             
             # Use built-in 4D batch functionality of resize_noise
+            rp.fansi_print(f"RESIZING NOISE: CALLING resize_noise with shape {noise_frames.shape} to size ({H}, {W})", 'yellow bold')
             resized_frames = resize_noise(noise_frames, (H, W))  # Handles 4D directly
+            rp.fansi_print(f"RESIZING NOISE: AFTER resize_noise - shape = {resized_frames.shape}", 'yellow bold')
             
             # Rearrange TCHW -> CTHW and add batch dimension
             import einops
             noise = einops.rearrange(resized_frames, 't c h w -> 1 c t h w')
+            rp.fansi_print(f"RESIZING NOISE: AFTER REARRANGE - shape = {noise.shape}", 'yellow bold')
             
             # Use rp.resize_list to handle temporal dimension change from T_n to T
+            rp.fansi_print(f"RESIZING NOISE: TEMPORAL RESIZE from {T_n} to {T} frames", 'yellow bold')
             noise = rp.resize_list(noise[0], T)[None]
+            rp.fansi_print(f"RESIZING NOISE: AFTER TEMPORAL RESIZE - final shape = {noise.shape}", 'yellow bold')
 
-            assert noise.shape==latents.shape
+            assert noise.shape==latents.shape, f"Shape mismatch after resize: {noise.shape} vs {latents.shape}"
+            rp.fansi_print(f"RESIZING NOISE: SHAPE MATCH CONFIRMED ✓", 'green bold')
 
         DEGRADATION_LEVEL = rp.random_float(0,1)
         rp.fansi_print(f"DEGRADATION LEVEL: {DEGRADATION_LEVEL}", 'green orange bold italic on black black')
 
+        rp.fansi_print(f"GET_NOISE: BEFORE mix_new_noise - shape = {noise.shape}", 'magenta bold')
         noise = mix_new_noise(noise, alpha=DEGRADATION_LEVEL)
+        rp.fansi_print(f"GET_NOISE: AFTER mix_new_noise - shape = {noise.shape}", 'magenta bold')
+
+        rp.fansi_print(f"GET_NOISE: RETURNING CUSTOM NOISE - final shape = {noise.shape}, min = {noise.min():.4f}, max = {noise.max():.4f}, mean = {noise.mean():.4f}", 'green bold')
 
     else:
-        rp.fansi_print("GET_NOISE: No custom noise found, generating random noise", 'red bold')
+        rp.fansi_print("🚨🚨🚨 GET_NOISE: FALLBACK TO RANDOM NOISE - THIS IS BAD! 🚨🚨🚨", 'red bold on white')
+        rp.fansi_print("🚨🚨🚨 CUSTOM NOISE SYSTEM FAILED - CHECK DATA PIPELINE! 🚨🚨🚨", 'red bold on white')
         # Generate random noise
         noise = torch.zeros_like(latents).normal_(generator=generator)
+        rp.fansi_print(f"🚨🚨🚨 FALLBACK RANDOM NOISE - shape = {noise.shape}, min = {noise.min():.4f}, max = {noise.max():.4f}, mean = {noise.mean():.4f} 🚨🚨🚨", 'red bold on white')
 
     return noise
