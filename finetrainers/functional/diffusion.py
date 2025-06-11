@@ -81,9 +81,21 @@ def get_noise(
             # Use rp.resize_list to handle temporal dimension change from T_n to T
             if T_n != T:
                 rp.fansi_print(f"RESIZING NOISE: Temporal resize {T_n} -> {T} frames", 'yellow bold')
-                # Remove batch dim, resize temporal, add batch back
-                noise_no_batch = noise[0]  # Remove batch: [C, T, H, W]
-                noise_resized = rp.resize_list(noise_no_batch, T)  # Resize temporal dimension
+                # Remove batch dim: [1, C, T, H, W] -> [C, T, H, W]
+                noise_no_batch = noise[0]
+                rp.fansi_print(f"RESIZING NOISE: Before temporal resize - shape = {noise_no_batch.shape}", 'yellow bold')
+                
+                # rp.resize_list operates on the first dimension, so we need to rearrange
+                # [C, T, H, W] -> [T, C, H, W] -> resize -> [T_new, C, H, W] -> [C, T_new, H, W]
+                noise_transposed = noise_no_batch.permute(1, 0, 2, 3)  # [T, C, H, W]
+                rp.fansi_print(f"RESIZING NOISE: Transposed for resize - shape = {noise_transposed.shape}", 'yellow bold')
+                
+                noise_resized_t = rp.resize_list(noise_transposed, T)  # Resize temporal dimension
+                rp.fansi_print(f"RESIZING NOISE: After resize_list - shape = {noise_resized_t.shape}", 'yellow bold')
+                
+                noise_resized = noise_resized_t.permute(1, 0, 2, 3)  # [C, T_new, H, W]
+                rp.fansi_print(f"RESIZING NOISE: Transposed back - shape = {noise_resized.shape}", 'yellow bold')
+                
                 noise = noise_resized[None]  # Add batch back: [1, C, T, H, W]
             else:
                 rp.fansi_print(f"RESIZING NOISE: No temporal resize needed", 'yellow bold')
