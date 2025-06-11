@@ -29,8 +29,8 @@ BACKEND="ptd"
 # NUM_GPUS=8
 # CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 
-NUM_GPUS=4
-CUDA_VISIBLE_DEVICES="4,5,6,7"
+NUM_GPUS=8
+CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 
 # Check the JSON files for the expected JSON format
 TRAINING_DATASET_CONFIG="examples/training/sft/wan_i2v/3dgs_dissolve/training.json"
@@ -54,8 +54,8 @@ LOW_VRAM="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 1 --dp_shards 8 
 # Parallel arguments
 parallel_cmd=(
   # $DDP_1
-  # $FSDP_8
-  $FSDP_4
+  $FSDP_8
+  # $FSDP_4
   # $LOW_VRAM
 )
 
@@ -128,14 +128,14 @@ training_cmd=(
   --training_type "lora"
   --seed 42
   --batch_size 1
-  --train_steps 1000
-  --rank 16
-  --lora_alpha 16
+  --train_steps 100000000000
+  --rank 512
+  --lora_alpha 512
   --target_modules "blocks.*(to_q|to_k|to_v|to_out.0)"
   --gradient_accumulation_steps 1
   --gradient_checkpointing
   --checkpointing_steps 101
-  --checkpointing_limit 2
+  --checkpointing_limit 2000
   # --resume_from_checkpoint 3000
   --enable_slicing
   --enable_tiling

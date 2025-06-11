@@ -377,10 +377,13 @@ class VideoFileCaptionFileListDataset(
     def __iter__(self):
         while True:
             for sample in self._get_data_iter():
-                sample = process_auxiliary_data_for_sample(sample, self._auxiliary_data_paths, self._sample_index)
-
-                self._sample_index += 1
-                yield sample
+                try:
+                    sample = process_auxiliary_data_for_sample(sample, self._auxiliary_data_paths, self._sample_index)
+                    yield sample
+                except Exception:
+                    rp.print_stack_trace()
+                finally:
+                    self._sample_index += 1
 
             if not self.infinite:
                 logger.warning(f"Dataset ({self.__class__.__name__}={self.root}) has run out of data")
