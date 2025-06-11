@@ -19,7 +19,7 @@ logger = get_logger()
 
 # TODO(aryan): we most likely don't need this. take a look after refactoring more
 # fmt: off
-IGNORE_KEYS_FOR_COLLATION = {"height", "width", "num_frames", "frame_rate", "rope_interpolation_scale", "return_dict", "attention_kwargs", "cross_attention_kwargs", "joint_attention_kwargs", "latents_mean", "latents_std"}
+IGNORE_KEYS_FOR_COLLATION = {"height", "width", "num_frames", "frame_rate", "rope_interpolation_scale", "return_dict", "attention_kwargs", "cross_attention_kwargs", "joint_attention_kwargs", "latents_mean", "latents_std", "noise"}
 # fmt: on
 
 
@@ -172,6 +172,8 @@ class ModelSpecification:
         for key in keys:
             if key in IGNORE_KEYS_FOR_COLLATION:
                 collated_data[key] = data[0][key]
+                if key == "noise":
+                    logger.info(f"COLLATE_LATENTS: Found noise tensor with shape {data[0][key].shape}")
                 continue
             collated_d = [d[key] for d in data]
             # TODO(aryan): Support multi-resolution collation

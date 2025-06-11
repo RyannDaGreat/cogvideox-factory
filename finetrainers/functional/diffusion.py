@@ -30,10 +30,13 @@ def get_noise(
     Returns:
         torch.Tensor: The noise tensor (either custom or randomly generated),
     """
-    rp.fansi_print(f'latent_model_conditions={latent_model_conditions}','green gray')
-    if True or "noise" in latent_model_conditions: #This didn't trigger for some reason...
+    rp.fansi_print(f"GET_NOISE: latent_model_conditions keys = {list(latent_model_conditions.keys())}", 'cyan bold')
+    
+    if "noise" in latent_model_conditions:
         # Use custom noise for Go With The Flow
         noise = latent_model_conditions["noise"].to(device=latents.device, dtype=latents.dtype)
+        rp.fansi_print(f"GET_NOISE: Using custom noise with shape {noise.shape}, latents shape {latents.shape}", 'green bold')
+        
         if noise.shape != latents.shape:
             B, T, C, H, W = latents.shape
 
@@ -42,10 +45,7 @@ def get_noise(
             noise = resize_noise(noise, (H, W))
             noise = rp.resize_list(noise[0], T)[None]
 
-
             assert noise.shape==latents.shape
-
-            raise ValueError(f"Custom noise shape {noise.shape} does not match latent shape {latents.shape}")
 
         DEGRADATION_LEVEL = rp.random_float(0,1)
         rp.fansi_print(f"DEGRADATION LEVEL: {DEGRADATION_LEVEL}", 'green orange bold italic on black black')
@@ -53,7 +53,7 @@ def get_noise(
         noise = mix_new_noise(noise, alpha=DEGRADATION_LEVEL)
 
     else:
-        rp.fansi_print("WHAT FUCK...NO NOISE???")
+        rp.fansi_print("GET_NOISE: No custom noise found, generating random noise", 'red bold')
         # Generate random noise
         noise = torch.zeros_like(latents).normal_(generator=generator)
 
