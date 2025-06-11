@@ -275,7 +275,7 @@ class ImageFileCaptionFileListDataset(
 class VideoFileCaptionFileListDataset(
     torch.utils.data.IterableDataset, torch.distributed.checkpoint.stateful.Stateful
 ):
-    def __init__(self, root: str, infinite: bool = False, auxiliary_data_types: Optional[List[str]] = None) -> None:
+    def __init__(self, root: str, infinite: bool = False, auxiliary_data_types: Optional[List[str]] = None, shuffle: bool = False) -> None:
         super().__init__()
 
         VALID_CAPTION_FILES = ["caption.txt", "captions.txt", "prompt.txt", "prompts.txt"]
@@ -319,6 +319,15 @@ class VideoFileCaptionFileListDataset(
             raise ValueError(f"Number of captions ({len(captions)}) must match number of videos ({len(videos)})")
 
         self._auxiliary_data_paths = load_auxiliary_data_paths(self.root, captions, self.auxiliary_data_types)
+
+        #TODO: If shuffle, shuffle ALL captions, videos, things in self._auxiliary_data_paths[aux_type]
+        #In this case, we ...
+        #This will be used so another, new class
+        #class WebEvalDataset
+        #    
+        #    def __init__(self, client, dataset_class, *dataset_args)
+        #        (ONLY assumes we have some delegator running with some children, and this class will take care of setting up the dataset for them. The code for that might go in another class, or might be inlined.)
+        #        (all you have to do to make the server is set up a *generic* set of webeval servers on the right conda env etc - we can make a script for that)
 
         for caption, video in zip(captions, videos):
             data.append({"caption": caption, "video": video})
@@ -1051,3 +1060,4 @@ else:
         video = torch.stack(frames)
         video = video.float() / 127.5 - 1.0
         return video
+
