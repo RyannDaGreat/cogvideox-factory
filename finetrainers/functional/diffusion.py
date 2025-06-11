@@ -45,46 +45,51 @@ def get_noise(
             B, C, T, H, W = latents.shape  # latents are BCTHW
             B_n, T_n, C_n, H_n, W_n = noise.shape  # noise is BTCHW
 
-            rp.fansi_print(f"RESIZING NOISE: SHAPE MISMATCH - old shape = {noise.shape} vs target = {latents.shape}", 'yellow bold')
-            rp.fansi_print(f"RESIZING NOISE: DIMENSIONS - latents BCTHW=({B},{C},{T},{H},{W}) vs noise BTCHW=({B_n},{T_n},{C_n},{H_n},{W_n})", 'yellow bold')
+            rp.fansi_print(f"RESIZING NOISE: {noise.shape} -> {latents.shape} | Spatial: ({H_n}x{W_n})->(") + f"{H}x{W}) | Temporal: {T_n}->{T}", 'yellow bold')
             assert B==1, 'Only use batch size 1 please, but B=='+str(B)
             
             # Remove batch dimension: BTCHW -> TCHW
             noise_frames = noise[0]  # [T, C, H, W]
-            rp.fansi_print(f"RESIZING NOISE: REMOVED BATCH - noise_frames shape = {noise_frames.shape}", 'yellow bold')
             
-            # Process each frame individually since 4D batch mode has a bug
-            rp.fansi_print(f"RESIZING NOISE: PROCESSING {T_n} FRAMES individually", 'yellow bold')
-            resized_frame_list = []
-            for i, frame in enumerate(noise_frames):
-                rp.fansi_print(f"RESIZING NOISE: FRAME {i+1}/{T_n} - input shape = {frame.shape}, device = {frame.device}", 'yellow bold')
-                # Move frame to CPU for resize_noise (it uses CPU coordinate matrices)
-                frame_cpu = frame.cpu()
-                resized_frame = resize_noise(frame_cpu, (H, W))  # frame is CHW
-                # Move back to original device
-                resized_frame = resized_frame.to(frame.device)
-                rp.fansi_print(f"RESIZING NOISE: FRAME {i+1}/{T_n} - output shape = {resized_frame.shape}, device = {resized_frame.device}", 'yellow bold')
-                resized_frame_list.append(resized_frame)
+            # Check if spatial resizing is needed
+            spatial_resize_needed = (H_n != H) or (W_n != W)
             
-            resized_frames = torch.stack(resized_frame_list, dim=0)  # Stack back to TCHW
-            rp.fansi_print(f"RESIZING NOISE: STACKED ALL FRAMES - shape = {resized_frames.shape}", 'yellow bold')
+            if spatial_resize_needed:
+                rp.fansi_print(f"RESIZING NOISE: Spatial resize needed, processing {T_n} frames...", 'yellow bold')
+                resized_frame_list = []
+                for i, frame in enumerate(noise_frames):
+                    if i == 0:  # Only log first frame
+                        rp.fansi_print(f"RESIZING NOISE: Frame 1 - {frame.shape} on {frame.device}", 'yellow bold')
+                    # Move frame to CPU for resize_noise (it uses CPU coordinate matrices)
+                    frame_cpu = frame.cpu()
+                    resized_frame = resize_noise(frame_cpu, (H, W))  # frame is CHW
+                    # Move back to original device
+                    resized_frame = resized_frame.to(frame.device)
+                    if i == 0:  # Only log first frame result
+                        rp.fansi_print(f"RESIZING NOISE: Frame 1 result - {resized_frame.shape} on {resized_frame.device}", 'yellow bold')
+                    resized_frame_list.append(resized_frame)
+                
+                resized_frames = torch.stack(resized_frame_list, dim=0)  # Stack back to TCHW
+            else:
+                rp.fansi_print(f"RESIZING NOISE: No spatial resize needed, skipping", 'yellow bold')
+                resized_frames = noise_frames
             
             # Rearrange TCHW -> CTHW and add batch dimension
             import einops
             noise = einops.rearrange(resized_frames, 't c h w -> 1 c t h w')
-            rp.fansi_print(f"RESIZING NOISE: AFTER REARRANGE - shape = {noise.shape}", 'yellow bold')
             
             # Use rp.resize_list to handle temporal dimension change from T_n to T
-            rp.fansi_print(f"RESIZING NOISE: TEMPORAL RESIZE from {T_n} to {T} frames", 'yellow bold')
-            # Remove batch dim, resize temporal, add batch back
-            noise_no_batch = noise[0]  # Remove batch: [C, T, H, W]
-            rp.fansi_print(f"RESIZING NOISE: BEFORE temporal resize - shape = {noise_no_batch.shape}", 'yellow bold')
-            noise_resized = rp.resize_list(noise_no_batch, T)  # Resize temporal dimension
-            noise = noise_resized[None]  # Add batch back: [1, C, T, H, W]
-            rp.fansi_print(f"RESIZING NOISE: AFTER TEMPORAL RESIZE - final shape = {noise.shape}", 'yellow bold')
+            if T_n != T:
+                rp.fansi_print(f"RESIZING NOISE: Temporal resize {T_n} -> {T} frames", 'yellow bold')
+                # Remove batch dim, resize temporal, add batch back
+                noise_no_batch = noise[0]  # Remove batch: [C, T, H, W]
+                noise_resized = rp.resize_list(noise_no_batch, T)  # Resize temporal dimension
+                noise = noise_resized[None]  # Add batch back: [1, C, T, H, W]
+            else:
+                rp.fansi_print(f"RESIZING NOISE: No temporal resize needed", 'yellow bold')
 
             assert noise.shape==latents.shape, f"Shape mismatch after resize: {noise.shape} vs {latents.shape}"
-            rp.fansi_print(f"RESIZING NOISE: SHAPE MATCH CONFIRMED ✓", 'green bold')
+            rp.fansi_print(f"RESIZING NOISE: ✓ Final shape = {noise.shape}", 'green bold')
 
         DEGRADATION_LEVEL = rp.random_float(0,1)
         rp.fansi_print(f"DEGRADATION LEVEL: {DEGRADATION_LEVEL}", 'green orange bold italic on black black')
