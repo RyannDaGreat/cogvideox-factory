@@ -1,4 +1,4 @@
-nimport functools
+import functools
 import json
 import os
 import time

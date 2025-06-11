@@ -900,7 +900,8 @@ def _initialize_local_dataset(
             dataset = VideoFolderDataset(root.as_posix(), infinite=infinite)
         return dataset
 
-    file_list = find_files(root.as_posix(), "*", depth=100)
+    # file_list = find_files(root.as_posix(), "*", depth=100) #WHAT THE FUCK???? THIS WILL TAKE SO LONG!!!
+    file_list = find_files(root.as_posix(), "*", depth=0) #WHAT THE FUCK???? THIS WILL TAKE SO LONG!!!
     has_tar_or_parquet_files = any(file.endswith(".tar") or file.endswith(".parquet") for file in file_list)
     if has_tar_or_parquet_files:
         return _initialize_webdataset(root.as_posix(), dataset_type, infinite, _caption_options=_caption_options)
