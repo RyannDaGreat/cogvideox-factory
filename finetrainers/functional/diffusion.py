@@ -45,7 +45,7 @@ def get_noise(
             B, C, T, H, W = latents.shape  # latents are BCTHW
             B_n, T_n, C_n, H_n, W_n = noise.shape  # noise is BTCHW
 
-            rp.fansi_print(f"RESIZING NOISE: {noise.shape} -> {latents.shape} | Spatial: ({H_n}x{W_n})->(") + f"{H}x{W}) | Temporal: {T_n}->{T}", 'yellow bold')
+            rp.fansi_print(f"RESIZING NOISE: {noise.shape} -> {latents.shape} | Spatial: ({H_n}x{W_n})->({H}x{W}) | Temporal: {T_n}->{T}", 'yellow bold')
             assert B==1, 'Only use batch size 1 please, but B=='+str(B)
             
             # Remove batch dimension: BTCHW -> TCHW
