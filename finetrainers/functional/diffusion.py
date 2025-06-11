@@ -76,7 +76,11 @@ def get_noise(
             
             # Use rp.resize_list to handle temporal dimension change from T_n to T
             rp.fansi_print(f"RESIZING NOISE: TEMPORAL RESIZE from {T_n} to {T} frames", 'yellow bold')
-            noise = rp.resize_list(noise[0], T)[None]
+            # Remove batch dim, resize temporal, add batch back
+            noise_no_batch = noise[0]  # Remove batch: [C, T, H, W]
+            rp.fansi_print(f"RESIZING NOISE: BEFORE temporal resize - shape = {noise_no_batch.shape}", 'yellow bold')
+            noise_resized = rp.resize_list(noise_no_batch, T)  # Resize temporal dimension
+            noise = noise_resized[None]  # Add batch back: [1, C, T, H, W]
             rp.fansi_print(f"RESIZING NOISE: AFTER TEMPORAL RESIZE - final shape = {noise.shape}", 'yellow bold')
 
             assert noise.shape==latents.shape, f"Shape mismatch after resize: {noise.shape} vs {latents.shape}"
