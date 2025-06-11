@@ -425,9 +425,11 @@ class WanModelSpecification(ModelSpecification):
             "compute_posterior": False,
             **kwargs,
         }
-        input_keys = set(conditions.keys())
+        # Keep track of input keys that were explicitly passed to this function
+        explicit_input_keys = {"vae", "image_encoder", "image_processor", "image", "video", "generator", "compute_posterior"}
         conditions = super().prepare_latents(**conditions)
-        conditions = {k: v for k, v in conditions.items() if k not in input_keys}
+        # Only filter out the explicit input keys, preserve auxiliary data like 'noise'
+        conditions = {k: v for k, v in conditions.items() if k not in explicit_input_keys}
         return conditions
 
     def forward(
