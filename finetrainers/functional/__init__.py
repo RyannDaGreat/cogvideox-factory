@@ -1,4 +1,4 @@
-from .diffusion import flow_match_target, flow_match_xt
+from .diffusion import flow_match_target, flow_match_xt, get_noise
 from .image import (
     bicubic_resize_image,
     center_crop_image,
