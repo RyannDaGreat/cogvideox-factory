@@ -484,8 +484,12 @@ class WanModelSpecification(ModelSpecification):
 
         latent_model_conditions["hidden_states"] = noisy_latents.to(latents)
 
+        # Filter out auxiliary data keys that shouldn't go to the transformer
+        transformer_latent_conditions = {k: v for k, v in latent_model_conditions.items() 
+                                       if k not in {"caption", "noise", "_original_num_frames", "_original_height", "_original_width"}}
+
         pred = transformer(
-            **latent_model_conditions,
+            **transformer_latent_conditions,
             **condition_model_conditions,
             timestep=timesteps,
             return_dict=False,
