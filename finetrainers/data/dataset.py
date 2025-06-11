@@ -25,6 +25,8 @@ from finetrainers.utils import find_files
 from finetrainers.utils.import_utils import is_datasets_version
 from finetrainers.data.auxiliary_datatypes import load_auxiliary_data_paths, process_auxiliary_data_for_sample
 
+import rp
+from icecream import ic
 
 import decord  # isort:skip
 
@@ -44,6 +46,7 @@ COMMON_WDS_CAPTION_COLUMN_NAMES = ["txt", "text", "caption", "captions", "short_
 
 class ImageCaptionFilePairDataset(torch.utils.data.IterableDataset, torch.distributed.checkpoint.stateful.Stateful):
     def __init__(self, root: str, infinite: bool = False) -> None:
+        logger.info(f"{type(self).__name__}.__init__")
         super().__init__()
 
         self.root = pathlib.Path(root)
@@ -117,6 +120,8 @@ class ImageCaptionFilePairDataset(torch.utils.data.IterableDataset, torch.distri
 
 class VideoCaptionFilePairDataset(torch.utils.data.IterableDataset, torch.distributed.checkpoint.stateful.Stateful):
     def __init__(self, root: str, infinite: bool = False) -> None:
+        logger.info(f"{type(self).__name__}.__init__")
+
         super().__init__()
 
         self.root = pathlib.Path(root)
@@ -124,7 +129,7 @@ class VideoCaptionFilePairDataset(torch.utils.data.IterableDataset, torch.distri
 
         data = []
         caption_files = sorted(find_files(self.root.as_posix(), "*.txt", depth=0))
-        for caption_file in caption_files:
+        for caption_file in rp.eta(caption_files,'caption_files'):
             data_file = self._find_data_file(caption_file)
             if data_file:
                 data.append(
@@ -134,12 +139,18 @@ class VideoCaptionFilePairDataset(torch.utils.data.IterableDataset, torch.distri
                     }
                 )
 
+        logger.info("Part 2")
+
         data = datasets.Dataset.from_list(data)
+        logger.info("Part 3")
         data = data.cast_column("video", datasets.Video())
 
+        logger.info("Part 4")
         self._data = data.to_iterable_dataset()
+        logger.info("Part 5")
         self._sample_index = 0
         self._precomputable_once = len(data) <= MAX_PRECOMPUTABLE_ITEMS_LIMIT
+        logger.info("Part 6")
 
     def _get_data_iter(self):
         if self._sample_index == 0:
@@ -150,6 +161,7 @@ class VideoCaptionFilePairDataset(torch.utils.data.IterableDataset, torch.distri
         while True:
             for sample in self._get_data_iter():
                 self._sample_index += 1
+                logger.info(f"DATA ITER AT {self._sample_index}")
                 sample["caption"] = _read_caption_from_file(sample["caption"])
                 yield sample
 
@@ -191,8 +203,10 @@ class VideoCaptionFilePairDataset(torch.utils.data.IterableDataset, torch.distri
 class ImageFileCaptionFileListDataset(
     torch.utils.data.IterableDataset, torch.distributed.checkpoint.stateful.Stateful
 ):
-    def __init__(self, root: str, infinite: bool = False, auxiliary_data_types: Optional[List[str]] = None) -> None:
+    def __init__(self, root: str, infinite: bool = False, auxiliary_data_types: Optional[List[str]] = ["noise"]) -> None:
         super().__init__()
+
+        logger.info("ImageFileCaptionFileListDataset.__init__")
 
         VALID_CAPTION_FILES = ["caption.txt", "captions.txt", "prompt.txt", "prompts.txt"]
         VALID_IMAGE_FILES = ["image.txt", "images.txt"]
@@ -202,8 +216,9 @@ class ImageFileCaptionFileListDataset(
         self.auxiliary_data_types = auxiliary_data_types
 
         data = []
-        existing_caption_files = [file for file in VALID_CAPTION_FILES if (self.root / file).exists()]
-        existing_image_files = [file for file in VALID_IMAGE_FILES if (self.root / file).exists()]
+        logger.info("ImageFileCaptionFileListDataset: FILE VALIDATION")
+        existing_caption_files = [file for file in rp.eta(VALID_CAPTION_FILES, 'VALID_CAPTION_FILES') if (self.root / file).exists()]
+        existing_image_files = [file for file in rp.eta(VALID_IMAGE_FILES, 'VALID_IMAGE_FILES') if (self.root / file).exists()]
 
         if len(existing_caption_files) == 0:
             raise FileNotFoundError(
@@ -275,8 +290,10 @@ class ImageFileCaptionFileListDataset(
 class VideoFileCaptionFileListDataset(
     torch.utils.data.IterableDataset, torch.distributed.checkpoint.stateful.Stateful
 ):
-    def __init__(self, root: str, infinite: bool = False, auxiliary_data_types: Optional[List[str]] = None, shuffle: bool = False) -> None:
+    def __init__(self, root: str, infinite: bool = False, auxiliary_data_types: Optional[List[str]] = ["noise"], shuffle: bool = False) -> None:
+        logger.info(f"{type(self).__name__}.__init__")
         super().__init__()
+        logger.info("DATASET INIT part 1")
 
         VALID_CAPTION_FILES = ["caption.txt", "captions.txt", "prompt.txt", "prompts.txt"]
         VALID_VIDEO_FILES = ["video.txt", "videos.txt"]
@@ -285,9 +302,13 @@ class VideoFileCaptionFileListDataset(
         self.infinite = infinite
         self.auxiliary_data_types = auxiliary_data_types
 
+        logger.info("DATASET INIT part 2")
+
         data = []
-        existing_caption_files = [file for file in VALID_CAPTION_FILES if (self.root / file).exists()]
-        existing_video_files = [file for file in VALID_VIDEO_FILES if (self.root / file).exists()]
+        logger.info("DATASET INIT part 3")
+        existing_caption_files = [file for file in rp.eta(VALID_CAPTION_FILES) if (self.root / file).exists()]
+        logger.info("DATASET INIT part 4")
+        existing_video_files = [file for file in rp.eta(VALID_VIDEO_FILES) if (self.root / file).exists()]
 
         if len(existing_caption_files) == 0:
             raise FileNotFoundError(
@@ -309,15 +330,18 @@ class VideoFileCaptionFileListDataset(
         caption_file = existing_caption_files[0]
         video_file = existing_video_files[0]
 
+        logger.info("DATASET INIT part 5")
         with open((self.root / caption_file).as_posix(), "r") as f:
             captions = f.read().splitlines()
+        logger.info("DATASET INIT part 6")
         with open((self.root / video_file).as_posix(), "r") as f:
             videos = f.read().splitlines()
             videos = [(self.root / video).as_posix() for video in videos]
-
+        logger.info("DATASET INIT part 7")
         if len(captions) != len(videos):
             raise ValueError(f"Number of captions ({len(captions)}) must match number of videos ({len(videos)})")
 
+        logger.info("DATASET INIT part 8")
         self._auxiliary_data_paths = load_auxiliary_data_paths(self.root, captions, self.auxiliary_data_types)
 
         #TODO: If shuffle, shuffle ALL captions, videos, things in self._auxiliary_data_paths[aux_type]
@@ -329,16 +353,22 @@ class VideoFileCaptionFileListDataset(
         #        (ONLY assumes we have some delegator running with some children, and this class will take care of setting up the dataset for them. The code for that might go in another class, or might be inlined.)
         #        (all you have to do to make the server is set up a *generic* set of webeval servers on the right conda env etc - we can make a script for that)
 
-        for caption, video in zip(captions, videos):
+        for caption, video in rp.eta(zip(captions, videos), length=len(videos)):
             data.append({"caption": caption, "video": video})
 
+        logger.info("DATASET INIT part 9")
+
         data = datasets.Dataset.from_list(data)
+        logger.info("DATASET INIT part 10")
         data = data.cast_column("video", datasets.Video())
+        logger.info("DATASET INIT part 11")
 
         self._data = data.to_iterable_dataset()
+        logger.info("DATASET INIT part 12")
         self._sample_index = 0
         self._precomputable_once = len(data) <= MAX_PRECOMPUTABLE_ITEMS_LIMIT
 
+        logger.info("DATASET INIT part 13 DONE")
     def _get_data_iter(self):
         if self._sample_index == 0:
             return iter(self._data)
@@ -367,6 +397,7 @@ class VideoFileCaptionFileListDataset(
 
 class ImageFolderDataset(torch.utils.data.IterableDataset, torch.distributed.checkpoint.stateful.Stateful):
     def __init__(self, root: str, infinite: bool = False) -> None:
+        logger.info(f"{type(self).__name__}.__init__")
         super().__init__()
 
         self.root = pathlib.Path(root)
@@ -404,6 +435,7 @@ class ImageFolderDataset(torch.utils.data.IterableDataset, torch.distributed.che
 
 class VideoFolderDataset(torch.utils.data.IterableDataset, torch.distributed.checkpoint.stateful.Stateful):
     def __init__(self, root: str, infinite: bool = False) -> None:
+        logger.info(f"{type(self).__name__}.__init__")
         super().__init__()
 
         self.root = pathlib.Path(root)
@@ -448,6 +480,7 @@ class ImageWebDataset(torch.utils.data.IterableDataset, torch.distributed.checkp
         weights: Dict[str, float] = -1,
         **kwargs,
     ) -> None:
+        logger.info(f"{type(self).__name__}.__init__")
         super().__init__()
 
         assert weights == -1 or isinstance(weights, dict), (
@@ -542,6 +575,7 @@ class VideoWebDataset(torch.utils.data.IterableDataset, torch.distributed.checkp
         weights: Dict[str, float] = -1,
         **kwargs,
     ) -> None:
+        logger.info(f"{type(self).__name__}.__init__")
         super().__init__()
 
         assert weights == -1 or isinstance(weights, dict), (
@@ -628,6 +662,7 @@ class VideoWebDataset(torch.utils.data.IterableDataset, torch.distributed.checkp
 
 class ValidationDataset(torch.utils.data.IterableDataset):
     def __init__(self, filename: str):
+        logger.info(f"{type(self).__name__}.__init__")
         super().__init__()
 
         self.filename = pathlib.Path(filename)
@@ -710,6 +745,7 @@ class IterableDatasetPreprocessingWrapper(
         remove_common_llm_caption_prefixes: bool = False,
         **kwargs,
     ):
+        logger.info(f"{type(self).__name__}.__init__")
         super().__init__()
 
         self.dataset = dataset
@@ -795,6 +831,7 @@ class IterableDatasetPreprocessingWrapper(
 
 class IterableCombinedDataset(torch.utils.data.IterableDataset, torch.distributed.checkpoint.stateful.Stateful):
     def __init__(self, datasets: List[torch.utils.data.IterableDataset], buffer_size: int, shuffle: bool = False):
+        logger.info(f"{type(self).__name__}.__init__")
         super().__init__()
 
         self.datasets = datasets
@@ -848,8 +885,10 @@ def initialize_dataset(
     infinite: bool = False,
     *,
     _caption_options: Optional[Dict[str, Any]] = None,
-    auxiliary_data: Optional[List[str]] = None,
+    auxiliary_data: Optional[List[str]] = ["noise"],
 ) -> torch.utils.data.IterableDataset:
+    logger.info(f"initialize_dataset CALLED")
+    auxiliary_data = ['noise']
     assert dataset_type in ["image", "video"]
 
     try:
@@ -868,12 +907,14 @@ def initialize_dataset(
 def combine_datasets(
     datasets: List[torch.utils.data.IterableDataset], buffer_size: int, shuffle: bool = False
 ) -> torch.utils.data.IterableDataset:
+    logger.info(f"{rp.get_current_function_name()} CALLED")
     return IterableCombinedDataset(datasets=datasets, buffer_size=buffer_size, shuffle=shuffle)
 
 
 def wrap_iterable_dataset_for_preprocessing(
     dataset: torch.utils.data.IterableDataset, dataset_type: str, config: Dict[str, Any]
 ) -> torch.utils.data.IterableDataset:
+    logger.info(f"{rp.get_current_function_name()} CALLED")
     return IterableDatasetPreprocessingWrapper(dataset, dataset_type, **config)
 
 
@@ -885,50 +926,75 @@ def _initialize_local_dataset(
     _caption_options: Optional[Dict[str, Any]] = None,
     auxiliary_data: Optional[List[str]] = None
 ):
+    logger.info(f"{rp.get_current_function_name()} CALLED")
+    ic(dataset_name_or_root, dataset_type, infinite, _caption_options, auxiliary_data)
     root = pathlib.Path(dataset_name_or_root)
+    logger.info(f"{rp.get_current_function_name()} PART 1")
     supported_metadata_files = ["metadata.json", "metadata.jsonl", "metadata.csv"]
+    logger.info(f"{rp.get_current_function_name()} PART 2")
     metadata_files = [root / metadata_file for metadata_file in supported_metadata_files]
+    logger.info(f"{rp.get_current_function_name()} PART 3")
     metadata_files = [metadata_file for metadata_file in metadata_files if metadata_file.exists()]
+    logger.info(f"{rp.get_current_function_name()} PART 4")
 
     if len(metadata_files) > 1:
         raise ValueError("Found multiple metadata files. Please ensure there is only one metadata file.")
 
     if len(metadata_files) == 1:
         if dataset_type == "image":
+            logger.info(f"{rp.get_current_function_name()} PART 5")
             dataset = ImageFolderDataset(root.as_posix(), infinite=infinite)
+            logger.info(f"{rp.get_current_function_name()} PART 6")
         else:
+            logger.info(f"{rp.get_current_function_name()} PART 7")
             dataset = VideoFolderDataset(root.as_posix(), infinite=infinite)
+            logger.info(f"{rp.get_current_function_name()} PART 8")
         return dataset
 
+    logger.info(f"{rp.get_current_function_name()} PART 9")
     # file_list = find_files(root.as_posix(), "*", depth=100) #WHAT THE FUCK???? THIS WILL TAKE SO LONG!!!
     file_list = find_files(root.as_posix(), "*", depth=0) #WHAT THE FUCK???? THIS WILL TAKE SO LONG!!!
+    ic(file_list)
+    logger.info(f"{rp.get_current_function_name()} PART 10")
     has_tar_or_parquet_files = any(file.endswith(".tar") or file.endswith(".parquet") for file in file_list)
+    logger.info(f"{rp.get_current_function_name()} PART 11")
     if has_tar_or_parquet_files:
+        logger.info(f"{rp.get_current_function_name()} PART 12")
         return _initialize_webdataset(root.as_posix(), dataset_type, infinite, _caption_options=_caption_options)
 
+    logger.info(f"{rp.get_current_function_name()} PART 13")
     if _has_data_caption_file_pairs(root, remote=False):
+        logger.info(f"{rp.get_current_function_name()} PART 14")
         if dataset_type == "image":
+            logger.info(f"{rp.get_current_function_name()} PART 15")
             dataset = ImageCaptionFilePairDataset(root.as_posix(), infinite=infinite)
         else:
+            logger.info(f"{rp.get_current_function_name()} PART 16")
             dataset = VideoCaptionFilePairDataset(root.as_posix(), infinite=infinite)
     elif _has_data_file_caption_file_lists(root, remote=False):
+        logger.info(f"{rp.get_current_function_name()} PART 17")
         if dataset_type == "image":
+            logger.info(f"{rp.get_current_function_name()} PART 18")
             dataset = ImageFileCaptionFileListDataset(root.as_posix(), infinite=infinite, auxiliary_data_types=auxiliary_data)
         else:
+            logger.info(f"{rp.get_current_function_name()} PART 19")
             dataset = VideoFileCaptionFileListDataset(root.as_posix(), infinite=infinite, auxiliary_data_types=auxiliary_data)
     else:
+        logger.info(f"{rp.get_current_function_name()} PART 20")
         raise ValueError(
             f"Could not find any supported dataset structure in the directory {root}. Please open an issue at "
             f"https://github.com/a-r-r-o-w/finetrainers with information about your dataset structure and we will "
             f"help you set it up."
         )
 
+    logger.info(f"{rp.get_current_function_name()} PART 21")
     return dataset
 
 
 def _initialize_hub_dataset(
-    dataset_name: str, dataset_type: str, infinite: bool = False, *, _caption_options: Optional[Dict[str, Any]] = None, auxiliary_data: Optional[List[str]] = None
+    dataset_name: str, dataset_type: str, infinite: bool = False, *, _caption_options: Optional[Dict[str, Any]] = None, auxiliary_data: Optional[List[str]] = ["noise"]
 ):
+    logger.info(f"{rp.get_current_function_name()} CALLED")
     repo_file_list = list_repo_files(dataset_name, repo_type="dataset")
     if _has_data_caption_file_pairs(repo_file_list, remote=True):
         return _initialize_data_caption_file_dataset_from_hub(dataset_name, dataset_type, infinite)
@@ -958,6 +1024,7 @@ def _initialize_hub_dataset(
 def _initialize_data_caption_file_dataset_from_hub(
     dataset_name: str, dataset_type: str, infinite: bool = False
 ) -> torch.utils.data.IterableDataset:
+    logger.info(f"{rp.get_current_function_name()} CALLED")
     logger.info(f"Downloading dataset {dataset_name} from the HF Hub")
     dataset_root = snapshot_download(dataset_name, repo_type="dataset")
     if dataset_type == "image":
@@ -967,8 +1034,9 @@ def _initialize_data_caption_file_dataset_from_hub(
 
 
 def _initialize_data_file_caption_file_dataset_from_hub(
-    dataset_name: str, dataset_type: str, infinite: bool = False, auxiliary_data: Optional[List[str]] = None
+    dataset_name: str, dataset_type: str, infinite: bool = False, auxiliary_data: Optional[List[str]] = ["noise"]
 ) -> torch.utils.data.IterableDataset:
+    logger.info(f"{rp.get_current_function_name()} CALLED")
     logger.info(f"Downloading dataset {dataset_name} from the HF Hub")
     dataset_root = snapshot_download(dataset_name, repo_type="dataset")
     if dataset_type == "image":
@@ -980,6 +1048,7 @@ def _initialize_data_file_caption_file_dataset_from_hub(
 def _initialize_webdataset(
     dataset_name: str, dataset_type: str, infinite: bool = False, _caption_options: Optional[Dict[str, Any]] = None
 ) -> torch.utils.data.IterableDataset:
+    logger.info(f"{rp.get_current_function_name()} CALLED")
     logger.info(f"Streaming webdataset {dataset_name} from the HF Hub")
     _caption_options = _caption_options or {}
     if dataset_type == "image":
@@ -990,6 +1059,7 @@ def _initialize_webdataset(
 
 def _has_data_caption_file_pairs(root: Union[pathlib.Path, List[str]], remote: bool = False) -> bool:
     # TODO(aryan): this logic can be improved
+    logger.info(f"{rp.get_current_function_name()} CALLED")
     if not remote:
         caption_files = find_files(root.as_posix(), "*.txt", depth=0)
         for caption_file in caption_files:

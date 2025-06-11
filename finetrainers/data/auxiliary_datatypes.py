@@ -4,6 +4,8 @@ import pathlib
 
 from finetrainers.logging import get_logger
 
+import einops
+
 logger = get_logger()
 
 import rp
@@ -21,7 +23,8 @@ def load_noise(file):
         print("LOADING NOISE FROM",file)
         output = np.load(file)
         assert output.ndim==4, 'THWC'
-        output = rp.as_torch_video(output)
+        output = torch.from_numpy(output)
+        output = einops.rearrange(output, 'T H W C -> T C H W')
         return output
 
 AUXILIARY_DATATYPES = {
