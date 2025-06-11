@@ -38,11 +38,23 @@ def get_noise(
         rp.fansi_print(f"GET_NOISE: Using custom noise with shape {noise.shape}, latents shape {latents.shape}", 'green bold')
         
         if noise.shape != latents.shape:
-            B, T, C, H, W = latents.shape
+            B, C, T, H, W = latents.shape  # latents are BCTHW
+            B_n, T_n, C_n, H_n, W_n = noise.shape  # noise is BTCHW
 
             rp.fansi_print(f"RESIZING NOISE: old shape = {noise.shape}   --->   new shape == {latents.shape}", 'green orange bold italic on black black')
             assert B==1, 'Only use batch size 1 please, but B=='+str(B)
-            noise = resize_noise(noise, (H, W))
+            
+            # Remove batch dimension: BTCHW -> TCHW
+            noise_frames = noise[0]  # [T, C, H, W]
+            
+            # Use built-in 4D batch functionality of resize_noise
+            resized_frames = resize_noise(noise_frames, (H, W))  # Handles 4D directly
+            
+            # Rearrange TCHW -> CTHW and add batch dimension
+            import einops
+            noise = einops.rearrange(resized_frames, 't c h w -> 1 c t h w')
+            
+            # Use rp.resize_list to handle temporal dimension change from T_n to T
             noise = rp.resize_list(noise[0], T)[None]
 
             assert noise.shape==latents.shape
