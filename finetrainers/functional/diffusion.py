@@ -57,9 +57,13 @@ def get_noise(
             rp.fansi_print(f"RESIZING NOISE: PROCESSING {T_n} FRAMES individually", 'yellow bold')
             resized_frame_list = []
             for i, frame in enumerate(noise_frames):
-                rp.fansi_print(f"RESIZING NOISE: FRAME {i+1}/{T_n} - input shape = {frame.shape}", 'yellow bold')
-                resized_frame = resize_noise(frame, (H, W))  # frame is CHW
-                rp.fansi_print(f"RESIZING NOISE: FRAME {i+1}/{T_n} - output shape = {resized_frame.shape}", 'yellow bold')
+                rp.fansi_print(f"RESIZING NOISE: FRAME {i+1}/{T_n} - input shape = {frame.shape}, device = {frame.device}", 'yellow bold')
+                # Move frame to CPU for resize_noise (it uses CPU coordinate matrices)
+                frame_cpu = frame.cpu()
+                resized_frame = resize_noise(frame_cpu, (H, W))  # frame is CHW
+                # Move back to original device
+                resized_frame = resized_frame.to(frame.device)
+                rp.fansi_print(f"RESIZING NOISE: FRAME {i+1}/{T_n} - output shape = {resized_frame.shape}, device = {resized_frame.device}", 'yellow bold')
                 resized_frame_list.append(resized_frame)
             
             resized_frames = torch.stack(resized_frame_list, dim=0)  # Stack back to TCHW
