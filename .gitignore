@@ -192,7 +192,9 @@ wan-framepack/
 *.swo
 *.swp
 *.un~
-
-#MacOS Files
+*.gstmp
+*.ipynb_checkpoints
 *.DS_Store
+#<RP Default Gitignore End>
 
+untracked

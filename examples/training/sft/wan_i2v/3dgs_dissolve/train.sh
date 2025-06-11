@@ -22,8 +22,15 @@ fi
 BACKEND="ptd"
 
 # In this setting, I'm using 1 GPU on a 4-GPU node for training
-NUM_GPUS=1
-CUDA_VISIBLE_DEVICES="3"
+
+# NUM_GPUS=1
+# CUDA_VISIBLE_DEVICES="3"
+
+# NUM_GPUS=8
+# CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+
+NUM_GPUS=4
+CUDA_VISIBLE_DEVICES="4,5,6,7"
 
 # Check the JSON files for the expected JSON format
 TRAINING_DATASET_CONFIG="examples/training/sft/wan_i2v/3dgs_dissolve/training.json"
@@ -37,26 +44,71 @@ FSDP_2="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 1 --dp_shards 2 --
 FSDP_4="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 1 --dp_shards 4 --cp_degree 1 --tp_degree 1"
 HSDP_2_2="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 2 --dp_shards 2 --cp_degree 1 --tp_degree 1"
 
+FSDP_8="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 1 --dp_shards 8 --cp_degree 1 --tp_degree 1"
+LOW_VRAM="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 1 --dp_shards 8 --cp_degree 1 --tp_degree 1"
+#NotImplementedError: Pipeline parallelism is not supported yet. This will be supported in the future.
+#NotImplementedError: Tensor parallelism
+#Data parallelism: Doesn't matter when batch size is 1...
+#ValueError: Attention provider native does not support context parallel. Please use a different provider.
+
 # Parallel arguments
 parallel_cmd=(
-  $DDP_1
+  # $DDP_1
+  # $FSDP_8
+  $FSDP_4
+  # $LOW_VRAM
 )
 
 # Model arguments
 model_cmd=(
   --model_name "wan"
-  --pretrained_model_name_or_path "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
+  # --pretrained_model_name_or_path "Wan-AI/Wan2.1-I2V-14B-480P-Diffusers"
+  --pretrained_model_name_or_path "Wan-AI/Wan2.1-I2V-14B-720P-Diffusers"
+  # --pretrained_model_name_or_path "/DOWNLOADS/Wan2.1-I2V-14B-720P-Diffusers"
   # --compile_modules text_encoder image_encoder transformer vae
   # --compile_scopes regional
 )
 
+# #ATTEMPT 0: DONT PRECOMPUTE ANYTHING, JUST TRAIN. ONLY WORKS FOR 480P-49Frames, 720P RESULTS IN VRAM OOM EERORS
+# # Dataset arguments
+# dataset_cmd=(
+#   --dataset_config $TRAINING_DATASET_CONFIG
+#   # --dataset_shuffle_buffer_size 32
+#   # --enable_precomputation
+#   # --precomputation_items 50
+#   # --precomputation_items 8
+#   # --precomputation_items 8
+#   # --precomputation_once
+#   # --precomputation_reuse
+# )
+
+#ATTEMPT 2: TRY TO PRECOMPUTE THEN TRAIN. YOU MUST DO STEP 1 THEN STEP 2.
+
+# #STEP 1: PRECOMPUTE THINGS. IT FREEZES TRAINING THO...IDK WHY...MAYBE A BUG? GPU USAGE DROPS TO 0 AFTER PRECOMPUTATION...
+# ALSO, WHY DOESN'T THIS STEP USE GPU? IDK....
+# # Dataset arguments
+# dataset_cmd=(
+#   --dataset_config $TRAINING_DATASET_CONFIG
+#   # --dataset_shuffle_buffer_size 32
+#   --enable_precomputation
+#   # --precomputation_items 50
+#   --precomputation_items 8
+#   # --precomputation_items 8
+#   --precomputation_once
+#   # --precomputation_reuse
+# )
+
+# MODE 2: AFTER COMPUTES...DO THE TRAINING BUT WE NEED THE PRECOMPUTE FOLDER
 # Dataset arguments
 dataset_cmd=(
   --dataset_config $TRAINING_DATASET_CONFIG
-  --dataset_shuffle_buffer_size 1
-  # --enable_precomputation
+  # --dataset_shuffle_buffer_size 32
+  --enable_precomputation
   # --precomputation_items 50
-  # --precomputation_once
+  --precomputation_items 1
+  # --precomputation_items 8
+  --precomputation_once
+  --precomputation_reuse
 )
 
 # Dataloader arguments
@@ -82,7 +134,7 @@ training_cmd=(
   --target_modules "blocks.*(to_q|to_k|to_v|to_out.0)"
   --gradient_accumulation_steps 1
   --gradient_checkpointing
-  --checkpointing_steps 501
+  --checkpointing_steps 101
   --checkpointing_limit 2
   # --resume_from_checkpoint 3000
   --enable_slicing
@@ -106,13 +158,13 @@ optimizer_cmd=(
 # Validation arguments
 validation_cmd=(
   --validation_dataset_file "$VALIDATION_DATASET_FILE"
-  --validation_steps 101
+  --validation_steps 1000001
 )
 
 # Miscellaneous arguments
 miscellaneous_cmd=(
   --tracker_name "finetrainers-wan-i2v"
-  --output_dir "/raid/aryan/wan-i2v"
+  --output_dir "/efs/users/jordanlin/public/ryan/CleanCode/Github/finetrainers/untracked/outputs/wani2v"
   --init_timeout 600
   --nccl_timeout 600
   --report_to "wandb"
