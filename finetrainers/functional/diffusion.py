@@ -53,10 +53,17 @@ def get_noise(
             noise_frames = noise[0]  # [T, C, H, W]
             rp.fansi_print(f"RESIZING NOISE: REMOVED BATCH - noise_frames shape = {noise_frames.shape}", 'yellow bold')
             
-            # Use built-in 4D batch functionality of resize_noise
-            rp.fansi_print(f"RESIZING NOISE: CALLING resize_noise with shape {noise_frames.shape} to size ({H}, {W})", 'yellow bold')
-            resized_frames = resize_noise(noise_frames, (H, W))  # Handles 4D directly
-            rp.fansi_print(f"RESIZING NOISE: AFTER resize_noise - shape = {resized_frames.shape}", 'yellow bold')
+            # Process each frame individually since 4D batch mode has a bug
+            rp.fansi_print(f"RESIZING NOISE: PROCESSING {T_n} FRAMES individually", 'yellow bold')
+            resized_frame_list = []
+            for i, frame in enumerate(noise_frames):
+                rp.fansi_print(f"RESIZING NOISE: FRAME {i+1}/{T_n} - input shape = {frame.shape}", 'yellow bold')
+                resized_frame = resize_noise(frame, (H, W))  # frame is CHW
+                rp.fansi_print(f"RESIZING NOISE: FRAME {i+1}/{T_n} - output shape = {resized_frame.shape}", 'yellow bold')
+                resized_frame_list.append(resized_frame)
+            
+            resized_frames = torch.stack(resized_frame_list, dim=0)  # Stack back to TCHW
+            rp.fansi_print(f"RESIZING NOISE: STACKED ALL FRAMES - shape = {resized_frames.shape}", 'yellow bold')
             
             # Rearrange TCHW -> CTHW and add batch dimension
             import einops
