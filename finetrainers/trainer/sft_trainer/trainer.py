@@ -422,7 +422,7 @@ class SFTTrainer(Trainer):
                 try:
                     condition_item = next(condition_iterator)
                     latent_item = next(latent_iterator)
-                    rp.fansi_print(f'latent_item={latent_item} condition_item={condition_item}','yellow')
+                    rp.fansi_print(f'latent_item={latent_item.keys()} condition_item={condition_item.keys()}','yellow')
                     sampler.consume(condition_item, latent_item)
                 except StopIteration:
                     if requires_gradient_step:
