@@ -1,4 +1,5 @@
 import torch
+import rp
 from typing import Dict, Optional
 
 
@@ -26,12 +27,22 @@ def get_noise(
         generator: Optional random generator for reproducibility
 
     Returns:
-        torch.Tensor: The noise tensor (either custom or randomly generated)
+        torch.Tensor: The noise tensor (either custom or randomly generated),
     """
     if "noise" in latent_model_conditions:
         # Use custom noise for Go With The Flow
         noise = latent_model_conditions["noise"].to(device=latents.device, dtype=latents.dtype)
         if noise.shape != latents.shape:
+            from rp.git.CommonSource.noise_warp import resize_noise
+            B, T, C, H, W = latents.shape
+
+            rp.fansi_print(f"RESIZING NOISE: old shape = {noise.shape}   --->   new shape == {latents.shape}", 'green orange bold italic on black black')
+            assert B==1, 'Only use batch size 1 please, but B=='+str(B)
+            noise = resize_noise(noise, (H, W))
+            noise = rp.resize_list(noise[0], T)[None]
+
+            assert noise.shape==latents.shape
+
             raise ValueError(f"Custom noise shape {noise.shape} does not match latent shape {latents.shape}")
     else:
         # Generate random noise
