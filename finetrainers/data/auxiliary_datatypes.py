@@ -6,15 +6,28 @@ from finetrainers.logging import get_logger
 
 logger = get_logger()
 
+import rp
+import numpy as np
 
 # Definition of supported auxiliary data types
 # Each entry contains:
 # 1. List of valid filenames
 # 2. A loader function that processes the file content
+
+def load_noise(file):
+    if file.endswith('.pth'):
+        return torch.load(file)
+    elif file.endswith('.npy'):
+        print("LOADING NOISE FROM",file)
+        output = np.load(file)
+        assert output.ndim==4, 'THWC'
+        output = rp.as_torch_video(output)
+        return output
+
 AUXILIARY_DATATYPES = {
     "noise": {
         "filenames": ["noise.txt", "noises.txt"],
-        "loader": torch.load,
+        "loader": load_noise,
     },
     # Other types can be added here in the future
 }

@@ -69,18 +69,18 @@ model_cmd=(
   # --compile_scopes regional
 )
 
-# #ATTEMPT 0: DONT PRECOMPUTE ANYTHING, JUST TRAIN. ONLY WORKS FOR 480P-49Frames, 720P RESULTS IN VRAM OOM EERORS
-# # Dataset arguments
-# dataset_cmd=(
-#   --dataset_config $TRAINING_DATASET_CONFIG
-#   # --dataset_shuffle_buffer_size 32
-#   # --enable_precomputation
-#   # --precomputation_items 50
-#   # --precomputation_items 8
-#   # --precomputation_items 8
-#   # --precomputation_once
-#   # --precomputation_reuse
-# )
+#ATTEMPT 0: DONT PRECOMPUTE ANYTHING, JUST TRAIN. ONLY WORKS FOR 480P-49Frames, 720P RESULTS IN VRAM OOM EERORS
+# Dataset arguments
+dataset_cmd=(
+  --dataset_config $TRAINING_DATASET_CONFIG
+  # --dataset_shuffle_buffer_size 32
+  # --enable_precomputation
+  # --precomputation_items 50
+  # --precomputation_items 8
+  # --precomputation_items 8
+  # --precomputation_once
+  # --precomputation_reuse
+)
 
 #ATTEMPT 2: TRY TO PRECOMPUTE THEN TRAIN. YOU MUST DO STEP 1 THEN STEP 2.
 
@@ -98,18 +98,18 @@ model_cmd=(
 #   # --precomputation_reuse
 # )
 
-# MODE 2: AFTER COMPUTES...DO THE TRAINING BUT WE NEED THE PRECOMPUTE FOLDER
-# Dataset arguments
-dataset_cmd=(
-  --dataset_config $TRAINING_DATASET_CONFIG
-  # --dataset_shuffle_buffer_size 32
-  --enable_precomputation
-  # --precomputation_items 50
-  --precomputation_items 1
-  # --precomputation_items 8
-  --precomputation_once
-  --precomputation_reuse
-)
+# # MODE 2: AFTER COMPUTES...DO THE TRAINING BUT WE NEED THE PRECOMPUTE FOLDER
+# # Dataset arguments
+# dataset_cmd=(
+#   --dataset_config $TRAINING_DATASET_CONFIG
+#   # --dataset_shuffle_buffer_size 32
+#   --enable_precomputation
+#   # --precomputation_items 50
+#   --precomputation_items 1
+#   # --precomputation_items 8
+#   --precomputation_once
+#   --precomputation_reuse
+# )
 
 # Dataloader arguments
 dataloader_cmd=(
@@ -164,10 +164,11 @@ validation_cmd=(
 # Miscellaneous arguments
 miscellaneous_cmd=(
   --tracker_name "finetrainers-wan-i2v"
-  --output_dir "/efs/users/jordanlin/public/ryan/CleanCode/Github/finetrainers/untracked/outputs/wani2v"
+  --output_dir "/efs/users/jordanlin/public/ryan/CleanCode/Github/finetrainers/untracked/outputs/wani2v_GWTF"
   --init_timeout 600
   --nccl_timeout 600
   --report_to "wandb"
+  --auxiliary_data "noise"
 )
 
 # Torch config arguments

@@ -1,4 +1,4 @@
-import functools
+nimport functools
 import json
 import os
 import time
@@ -250,6 +250,8 @@ class SFTTrainer(Trainer):
             dataset_configs = json.load(file)["datasets"]
         logger.info(f"Training configured to use {len(dataset_configs)} datasets")
 
+        ###CLOCK START
+
         datasets = []
         for config in dataset_configs:
             data_root = config.pop("data_root", None)
@@ -269,6 +271,8 @@ class SFTTrainer(Trainer):
                 raise ValueError(
                     f"Dataset {dataset_name_or_root} does not support precomputing all embeddings at once."
                 )
+            
+            ###CLOCK STOP: 2 HOURS PASSED
 
             logger.info(f"Initialized dataset: {dataset_name_or_root}")
             dataset = self.state.parallel_backend.prepare_dataset(dataset)
