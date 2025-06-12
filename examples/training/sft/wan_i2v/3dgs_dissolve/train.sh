@@ -40,12 +40,14 @@ VALIDATION_DATASET_FILE="examples/training/sft/wan_i2v/3dgs_dissolve/validation.
 DDP_1="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 1 --dp_shards 1 --cp_degree 1 --tp_degree 1"
 DDP_2="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 2 --dp_shards 1 --cp_degree 1 --tp_degree 1"
 DDP_4="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 4 --dp_shards 1 --cp_degree 1 --tp_degree 1"
+DDP_8="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 8 --dp_shards 1 --cp_degree 1 --tp_degree 1"
 FSDP_2="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 1 --dp_shards 2 --cp_degree 1 --tp_degree 1"
 FSDP_4="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 1 --dp_shards 4 --cp_degree 1 --tp_degree 1"
 HSDP_2_2="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 2 --dp_shards 2 --cp_degree 1 --tp_degree 1"
 
 FSDP_8="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 1 --dp_shards 8 --cp_degree 1 --tp_degree 1"
 LOW_VRAM="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 1 --dp_shards 8 --cp_degree 1 --tp_degree 1"
+WAAAN="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 4 --dp_shards 2 --cp_degree 1 --tp_degree 1"
 #NotImplementedError: Pipeline parallelism is not supported yet. This will be supported in the future.
 #NotImplementedError: Tensor parallelism
 #Data parallelism: Doesn't matter when batch size is 1...
@@ -54,9 +56,11 @@ LOW_VRAM="--parallel_backend $BACKEND --pp_degree 1 --dp_degree 1 --dp_shards 8 
 # Parallel arguments
 parallel_cmd=(
   # $DDP_1
-  $FSDP_8
+  # $FSDP_8
+  # $DDP_8
   # $FSDP_4
   # $LOW_VRAM
+  $WAAAN
 )
 
 # Model arguments
@@ -129,8 +133,8 @@ training_cmd=(
   --seed 42
   --batch_size 1
   --train_steps 100000000000
-  --rank 512
-  --lora_alpha 512
+  --rank 1024
+  --lora_alpha 1024
   --target_modules "blocks.*(to_q|to_k|to_v|to_out.0)"
   --gradient_accumulation_steps 1
   --gradient_checkpointing
@@ -164,7 +168,7 @@ validation_cmd=(
 # Miscellaneous arguments
 miscellaneous_cmd=(
   --tracker_name "finetrainers-wan-i2v"
-  --output_dir "/efs/users/jordanlin/public/ryan/CleanCode/Github/finetrainers/untracked/outputs/wani2v_GWTF"
+  --output_dir "/efs/users/jordanlin/public/ryan/CleanCode/Github/finetrainers/untracked/outputs/wani2v_GWTF_rank1024"
   --init_timeout 600
   --nccl_timeout 600
   --report_to "wandb"
